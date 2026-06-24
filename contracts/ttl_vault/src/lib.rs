@@ -47,9 +47,11 @@ use types::{
     DUPLICATE_VAULT_TOPIC,
     MetadataVersionEntry, META_VERSION_TOPIC, META_REVERT_TOPIC, VAULT_ARCHIVED_TOPIC,
     VAULT_CAP_TOPIC, BENEFICIARY_CAP_TOPIC,
-    CheckInHistoryEntry, CheckInStreak,
-    DELEGATE_CHECKIN_TOPIC, REVOKE_DELEGATE_TOPIC, CHECKIN_POW_TOPIC, TTL_PREDICTED_TOPIC,
-    BATCH_CHECKIN_TOPIC,
+        CheckInHistoryEntry, CheckInStreak,
+        TokenFeeConfig, PendingWithdrawal,
+        FEE_CONFIG_UPDATED_TOPIC, FEE_BATCH_EXECUTED_TOPIC,
+        DELEGATE_CHECKIN_TOPIC, REVOKE_DELEGATE_TOPIC, CHECKIN_POW_TOPIC, TTL_PREDICTED_TOPIC,
+        BATCH_CHECKIN_TOPIC,
     STATE_TRANSITION_TOPIC, OWNERSHIP_PROOF_TOPIC, INTEGRITY_TOPIC, BATCH_STATUS_TOPIC,
     PROOF_OF_LIFE_TOPIC, RELEASE_VOTE_TOPIC, RELEASE_VOTE_PASSED_TOPIC,
     HibernationEntry, EncryptedBackupCodes, PasskeyAnalytics, PasskeyUsageStat,
@@ -228,6 +230,8 @@ pub enum ContractError {
     AuctionAlreadyExists = 79,
     AuctionEnded = 80,
     AuctionNotEnded = 81,
+    // Issue #767: vault limit per owner
+    VaultLimitReached = 82,
 }
 
 #[contract]
@@ -1015,6 +1019,17 @@ impl TtlVaultContract {
                 let current_count = Self::load_owner_vault_ids(&env, &owner).len() as u32;
                 if current_count >= limit {
                     panic_with_error!(&env, ContractError::VaultCapacityExceeded);
+                }
+            }
+
+            // Issue #767: enforce max vaults per owner
+            if limit == 0 {
+                let max_vaults = Self::get_max_vaults_per_owner(env.clone());
+                if max_vaults > 0 {
+                    let current_count = Self::load_owner_vault_ids(&env, &owner).len() as u32;
+                    if current_count >= max_vaults {
+                        panic_with_error!(&env, ContractError::VaultLimitReached);
+                    }
                 }
             }
 
@@ -8877,6 +8892,26 @@ impl TtlVaultContract {
             .unwrap_or(0u32)
     }
 
+    // ── Issue #767: Max Vaults Per Owner ──────────────────────────────────────
+
+    /// Sets the maximum number of vaults a single owner may create.
+    ///
+    /// Admin-only. Default is 50. Set to 0 to remove the limit.
+    pub fn set_max_vaults_per_owner(env: Env, max: u32) {
+        Self::require_admin(&env);
+        env.storage().instance().set(&DataKey::MaxVaultsPerOwner, &max);
+        env.storage().instance().extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_LEDGERS);
+        env.events().publish((VAULT_CAP_TOPIC,), max);
+    }
+
+    /// Returns the configured max vaults per owner (default 50).
+    pub fn get_max_vaults_per_owner(env: Env) -> u32 {
+        env.storage()
+            .instance()
+            .get(&DataKey::MaxVaultsPerOwner)
+            .unwrap_or(50u32)
+    }
+
     // ── Beneficiary Capacity Limits ───────────────────────────────────────────
 
     /// Sets the maximum number of vaults a single beneficiary may be assigned to.
@@ -9013,12 +9048,66 @@ impl TtlVaultContract {
             .unwrap_or_else(|| Vec::new(&env))
     }
 
+    /// Returns a paginated slice of check-in history entries, newest first.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban environment
+    /// * `vault_id` - The vault to query
+    /// * `cursor` - Index of the first entry to return (0 = most recent)
+    /// * `limit` - Maximum number of entries to return (capped at 50)
+    ///
+    /// # Returns
+    /// A vector of `CheckInHistoryEntry` values, ordered newest-first.
+    pub fn get_check_in_history_page(
+        env: Env,
+        vault_id: u64,
+        cursor: u64,
+        limit: u32,
+    ) -> Vec<CheckInHistoryEntry> {
+        let history: Vec<CheckInHistoryEntry> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::CheckInHistory(vault_id))
+            .unwrap_or_else(|| Vec::new(&env));
+        let len = history.len() as u64;
+        let limit = limit.min(50) as u64;
+        let mut result = Vec::new(&env);
+        let mut i: u64 = 0;
+        while i < limit {
+            let idx = cursor.saturating_add(i);
+            if idx >= len {
+                break;
+            }
+            let hist_idx = len - 1 - idx;
+            result.push_back(history.get(hist_idx as u32).unwrap());
+            i += 1;
+        }
+        result
+    }
+
     /// Returns the current check-in streak for a vault.
     pub fn get_check_in_streak(env: Env, vault_id: u64) -> CheckInStreak {
         env.storage()
             .persistent()
             .get(&DataKey::CheckInStreak(vault_id))
             .unwrap_or(CheckInStreak { current: 0, best: 0, last_timestamp: 0 })
+    }
+
+    /// Returns the age of a vault in seconds since creation.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban environment
+    /// * `vault_id` - The vault to query
+    ///
+    /// # Returns
+    /// Seconds since the vault was created, or 0 if the vault does not exist.
+    pub fn get_vault_age(env: Env, vault_id: u64) -> u64 {
+        if let Some(vault) = Self::try_load_vault(&env, vault_id) {
+            let now = env.ledger().timestamp();
+            now.saturating_sub(vault.created_at)
+        } else {
+            0
+        }
     }
 
     // ── Issue #481: Check-In Proof of Work ───────────────────────────────────
@@ -9179,6 +9268,65 @@ impl TtlVaultContract {
         Self::is_check_in_delegate(&env, vault_id, &delegate)
     }
 
+    // ── Issue #593: Token Fee Optimization ────────────────────────────────────
+
+    /// Sets the token fee optimization configuration.
+    ///
+    /// When accumulation is enabled, withdrawals below the threshold are batched
+    /// and processed together to reduce per-transfer base fees.
+    ///
+    /// Admin-only.
+    pub fn set_token_fee_config(env: Env, config: TokenFeeConfig) {
+        Self::require_admin(&env);
+        env.storage().instance().set(&DataKey::TokenFeeConfig, &config);
+        env.storage().instance().extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_LEDGERS);
+        env.events().publish((FEE_CONFIG_UPDATED_TOPIC,), config);
+    }
+
+    /// Returns the token fee optimization configuration.
+    pub fn get_token_fee_config(env: Env) -> TokenFeeConfig {
+        env.storage()
+            .instance()
+            .get(&DataKey::TokenFeeConfig)
+            .unwrap_or(TokenFeeConfig {
+                accumulation_enabled: false,
+                accumulation_threshold: 0,
+            })
+    }
+
+    /// Processes all pending batched withdrawals for a vault.
+    ///
+    /// Transfers accumulated amounts to their recipients in a single batch
+    /// to minimize per-transfer fees.
+    pub fn execute_pending_withdrawals(env: Env, vault_id: u64) {
+        let key = DataKey::PendingWithdrawals;
+        let pending: Vec<PendingWithdrawal> = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or_else(|| Vec::new(&env));
+        if pending.is_empty() {
+            return;
+        }
+        let vault = Self::load_vault(&env, vault_id);
+        let token_client = token::Client::new(&env, &vault.token_address);
+        let mut total = 0i128;
+        for pw in pending.iter() {
+            total += pw.amount;
+        }
+        if total > vault.balance {
+            return;
+        }
+        for pw in pending.iter() {
+            token_client.transfer(&env.current_contract_address(), &pw.recipient, &pw.amount);
+        }
+        let mut v = vault.clone();
+        v.balance = v.balance.saturating_sub(total);
+        Self::save_vault(&env, vault_id, &v);
+        env.storage().persistent().remove(&key);
+        env.events().publish((FEE_BATCH_EXECUTED_TOPIC, vault_id), (pending.len() as u32, total));
+    }
+
     // ── Internal withdraw helper (shared by withdraw + multisig execute) ─────
 
     fn do_withdraw(env: &Env, vault_id: u64, vault: &Vault, amount: i128) -> Result<(), ContractError> {
@@ -9187,6 +9335,33 @@ impl TtlVaultContract {
         }
         if vault.balance < amount {
             return Err(ContractError::InsufficientBalance);
+        }
+        let config: TokenFeeConfig = env
+            .storage()
+            .instance()
+            .get(&DataKey::TokenFeeConfig)
+            .unwrap_or(TokenFeeConfig {
+                accumulation_enabled: false,
+                accumulation_threshold: 0,
+            });
+        if config.accumulation_enabled && config.accumulation_threshold > 0 && amount < config.accumulation_threshold {
+            let key = DataKey::PendingWithdrawals;
+            let mut pending: Vec<PendingWithdrawal> = env
+                .storage()
+                .persistent()
+                .get(&key)
+                .unwrap_or_else(|| Vec::new(env));
+            pending.push_back(PendingWithdrawal {
+                recipient: vault.owner.clone(),
+                amount,
+            });
+            env.storage().persistent().set(&key, &pending);
+            env.storage().persistent().extend_ttl(&key, VAULT_TTL_THRESHOLD, VAULT_TTL_LEDGERS);
+            let mut v = vault.clone();
+            v.balance = v.balance.saturating_sub(amount);
+            Self::save_vault(env, vault_id, &v);
+            env.events().publish((WITHDRAW_TOPIC, vault_id), (amount, v.balance));
+            return Ok(());
         }
         let token_client = token::Client::new(env, &vault.token_address);
         token_client.transfer(&env.current_contract_address(), &vault.owner, &amount);

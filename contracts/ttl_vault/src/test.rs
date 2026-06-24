@@ -1601,6 +1601,184 @@ fn test_get_vaults_by_beneficiary_pagination() {
     );
 }
 
+// ── Issue #771: get_check_in_history_page ──────────────────────────────────
+
+#[test]
+fn test_get_check_in_history_page() {
+    let (env, owner, beneficiary, _, _, client) = setup();
+
+    let vault_id = client.create_vault(&owner, &beneficiary, &100u64, &None);
+
+    env.ledger().with_mut(|l| l.timestamp += 10);
+    client.check_in(&vault_id, &owner, &BytesN::from_array(&env, &[0; 32]));
+    env.ledger().with_mut(|l| l.timestamp += 10);
+    client.check_in(&vault_id, &owner, &BytesN::from_array(&env, &[0; 32]));
+    env.ledger().with_mut(|l| l.timestamp += 10);
+    client.check_in(&vault_id, &owner, &BytesN::from_array(&env, &[0; 32]));
+    env.ledger().with_mut(|l| l.timestamp += 10);
+    client.check_in(&vault_id, &owner, &BytesN::from_array(&env, &[0; 32]));
+    env.ledger().with_mut(|l| l.timestamp += 10);
+    client.check_in(&vault_id, &owner, &BytesN::from_array(&env, &[0; 32]));
+
+    let all = client.get_check_in_history(&vault_id);
+    assert_eq!(all.len(), 5);
+
+    // cursor=0 returns most recent 2 entries
+    let page0 = client.get_check_in_history_page(&vault_id, &0u64, &2u32);
+    assert_eq!(page0.len(), 2);
+    assert_eq!(page0.get(0).unwrap().timestamp, 50u64);
+    assert_eq!(page0.get(1).unwrap().timestamp, 40u64);
+
+    // cursor=2 returns next 2
+    let page2 = client.get_check_in_history_page(&vault_id, &2u64, &2u32);
+    assert_eq!(page2.len(), 2);
+    assert_eq!(page2.get(0).unwrap().timestamp, 30u64);
+    assert_eq!(page2.get(1).unwrap().timestamp, 20u64);
+
+    // cursor=4 returns last one
+    let page4 = client.get_check_in_history_page(&vault_id, &4u64, &2u32);
+    assert_eq!(page4.len(), 1);
+    assert_eq!(page4.get(0).unwrap().timestamp, 10u64);
+
+    // cursor=100 out of range → empty
+    let empty = client.get_check_in_history_page(&vault_id, &100u64, &2u32);
+    assert_eq!(empty.len(), 0);
+}
+
+#[test]
+fn test_get_check_in_history_page_caps_limit() {
+    let (env, owner, beneficiary, _, _, client) = setup();
+
+    let vault_id = client.create_vault(&owner, &beneficiary, &100u64, &None);
+    for i in 0..60u64 {
+        env.ledger().with_mut(|l| l.timestamp += 1);
+        client.check_in(&vault_id, &owner, &BytesN::from_array(&env, &[0; 32]));
+    }
+
+    // request 100, but should be capped at 50
+    let page = client.get_check_in_history_page(&vault_id, &0u64, &100u32);
+    assert!(page.len() <= 50);
+}
+
+#[test]
+fn test_get_check_in_history_page_empty() {
+    let (env, owner, beneficiary, _, _, client) = setup();
+
+    let vault_id = client.create_vault(&owner, &beneficiary, &100u64, &None);
+
+    // No check-ins yet
+    let page = client.get_check_in_history_page(&vault_id, &0u64, &10u32);
+    assert_eq!(page.len(), 0);
+}
+
+// ── Issue #766: get_vault_age ─────────────────────────────────────────────
+
+#[test]
+fn test_get_vault_age_new() {
+    let (env, owner, beneficiary, _, _, client) = setup();
+
+    let vault_id = client.create_vault(&owner, &beneficiary, &100u64, &None);
+
+    // Immediately after creation, age should be 0
+    let age = client.get_vault_age(&vault_id);
+    assert_eq!(age, 0);
+}
+
+#[test]
+fn test_get_vault_age_long_lived() {
+    let (env, owner, beneficiary, _, _, client) = setup();
+
+    let vault_id = client.create_vault(&owner, &beneficiary, &100u64, &None);
+
+    env.ledger().with_mut(|l| l.timestamp += 3600); // 1 hour later
+
+    let age = client.get_vault_age(&vault_id);
+    assert_eq!(age, 3600);
+}
+
+#[test]
+fn test_get_vault_age_nonexistent() {
+    let (env, _, _, _, _, client) = setup();
+
+    let age = client.get_vault_age(&999u64);
+    assert_eq!(age, 0);
+}
+
+// ── Issue #767: max vaults per owner ──────────────────────────────────────
+
+#[test]
+fn test_max_vaults_per_owner_default() {
+    let (env, _, _, _, _, client) = setup();
+
+    let max = client.get_max_vaults_per_owner();
+    assert_eq!(max, 50);
+}
+
+#[test]
+fn test_max_vaults_per_owner_limit_enforced() {
+    let (env, owner, beneficiary, _, admin, client) = setup();
+
+    // Set limit to 2
+    client.set_max_vaults_per_owner(&2u32);
+
+    client.create_vault(&owner, &beneficiary, &100u64, &None);
+    client.create_vault(&owner, &beneficiary, &200u64, &None);
+
+    // Third one should fail
+    let err = client
+        .try_create_vault(&owner, &beneficiary, &300u64, &None)
+        .unwrap_err()
+        .unwrap();
+    assert_eq!(err, ContractError::VaultLimitReached);
+}
+
+#[test]
+fn test_max_vaults_per_owner_update() {
+    let (env, owner, beneficiary, _, admin, client) = setup();
+
+    // Set limit to 1, then update to 3
+    client.set_max_vaults_per_owner(&1u32);
+
+    client.create_vault(&owner, &beneficiary, &100u64, &None);
+
+    let err = client
+        .try_create_vault(&owner, &beneficiary, &200u64, &None)
+        .unwrap_err()
+        .unwrap();
+    assert_eq!(err, ContractError::VaultLimitReached);
+
+    // Admin raises limit
+    client.set_max_vaults_per_owner(&3u32);
+    client.create_vault(&owner, &beneficiary, &200u64, &None);
+    client.create_vault(&owner, &beneficiary, &300u64, &None);
+}
+
+// ── Issue #593: Token Fee Optimization ────────────────────────────────────
+
+#[test]
+fn test_token_fee_config_default() {
+    let (env, _, _, _, _, client) = setup();
+
+    let config = client.get_token_fee_config();
+    assert!(!config.accumulation_enabled);
+    assert_eq!(config.accumulation_threshold, 0);
+}
+
+#[test]
+fn test_token_fee_config_set_and_get() {
+    let (env, _, _, _, _, client) = setup();
+
+    let config = TokenFeeConfig {
+        accumulation_enabled: true,
+        accumulation_threshold: 1000,
+    };
+    client.set_token_fee_config(&config);
+
+    let retrieved = client.get_token_fee_config();
+    assert!(retrieved.accumulation_enabled);
+    assert_eq!(retrieved.accumulation_threshold, 1000);
+}
+
 #[test]
 fn test_withdraw_rejected_on_cancelled_vault() {
     let (_, owner, beneficiary, _, _, client) = setup();

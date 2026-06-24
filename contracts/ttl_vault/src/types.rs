@@ -208,6 +208,10 @@ pub const TOKEN_HEDGE_CLOSE_TOPIC: Symbol = symbol_short!("tok_hcls");
 pub const TOKEN_REBALANCE_TOPIC: Symbol = symbol_short!("tok_rebl");
 pub const TOKEN_REBALANCED_TOPIC: Symbol = symbol_short!("tok_rebd");
 
+// Issue #593: Token Fee Optimization
+pub const FEE_CONFIG_UPDATED_TOPIC: Symbol = symbol_short!("fee_cfg");
+pub const FEE_BATCH_EXECUTED_TOPIC: Symbol = symbol_short!("fee_bat");
+
 // Issue #529: beneficiary pooling
 pub const POOL_CREATED_TOPIC: Symbol = symbol_short!("pool_crt");
 
@@ -423,6 +427,11 @@ pub enum DataKey {
     BeneficiaryAuction(u64),
     BeneficiaryAuctionBid(u64, Address),
     BeneficiaryAuctionCount,
+    // Issue #767: max vaults per owner
+    MaxVaultsPerOwner,
+    // Issue #593: token fee optimization
+    TokenFeeConfig,
+    PendingWithdrawals,
 }
 
 /// Check-in history entry for TTL prediction - Issue #482
@@ -430,6 +439,22 @@ pub enum DataKey {
 #[derive(Clone)]
 pub struct CheckInHistoryEntry {
     pub timestamp: u64,
+}
+
+/// Token fee optimization config - Issue #593
+#[contracttype]
+#[derive(Clone)]
+pub struct TokenFeeConfig {
+    pub accumulation_enabled: bool,
+    pub accumulation_threshold: i128,
+}
+
+/// Pending withdrawal for fee batching - Issue #593
+#[contracttype]
+#[derive(Clone)]
+pub struct PendingWithdrawal {
+    pub recipient: Address,
+    pub amount: i128,
 }
 
 /// Check-in streak tracking - Issue #482
