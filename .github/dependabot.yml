@@ -8,7 +8,7 @@ updates:
       time: "03:00"
     open-pull-requests-limit: 10
     assignees:
-      - OxDev-max
+      - NnamdiCyber
     labels:
       - dependencies
       - security
@@ -33,7 +33,7 @@ updates:
       time: "03:00"
     open-pull-requests-limit: 5
     assignees:
-      - OxDev-max
+      - NnamdiCyber
     labels:
       - dependencies
       - ci

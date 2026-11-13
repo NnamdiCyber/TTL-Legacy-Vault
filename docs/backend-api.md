@@ -531,8 +531,8 @@ readinessProbe:
 
 For issues or questions:
 
-- **GitHub Issues**: https://github.com/TTL-Legacy/TTL-Legacy/issues
-- **Documentation**: https://github.com/TTL-Legacy/TTL-Legacy/blob/main/docs/
+- **GitHub Issues**: https://github.com/NnamdiCyber/TTL-Legacy-Vault/issues
+- **Documentation**: https://github.com/NnamdiCyber/TTL-Legacy-Vault/blob/main/docs/
 
 ---
 

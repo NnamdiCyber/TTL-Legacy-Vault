@@ -25,7 +25,7 @@ body = """
 ### {{ group | striptags | trim | upper_first }}
 {% for commit in commits %}
 - {% if commit.scope %}**{{ commit.scope }}**: {% endif %}\
-  {{ commit.message | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/OxDev-max/TTL-Legacy/commit/{{ commit.id }}))\
+  {{ commit.message | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/NnamdiCyber/TTL-Legacy-Vault/commit/{{ commit.id }}))\
 {% endfor %}
 {% endfor %}\n
 """

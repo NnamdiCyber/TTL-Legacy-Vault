@@ -1,4 +1,4 @@
-# TTL-Legacy — Micro-Endowment Check-In Vault on Stellar
+# TTL-Legacy-Vault — Micro-Endowment Check-In Vault on Stellar
 
 [![CI](https://github.com/NnamdiCyber/TTL-Legacy-Vault/actions/workflows/ci.yml/badge.svg)](https://github.com/NnamdiCyber/TTL-Legacy-Vault/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/NnamdiCyber/TTL-Legacy-Vault/branch/main/graph/badge.svg)](https://codecov.io/gh/NnamdiCyber/TTL-Legacy-Vault)
