@@ -1,8 +1,8 @@
 # TTL-Legacy — Micro-Endowment Check-In Vault on Stellar
 
-[![CI](https://github.com/OxDev-max/TTL-Legacy/actions/workflows/ci.yml/badge.svg)](https://github.com/OxDev-max/TTL-Legacy/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/OxDev-max/TTL-Legacy/branch/main/graph/badge.svg)](https://codecov.io/gh/OxDev-max/TTL-Legacy)
-[![OpenAPI Valid](https://github.com/OxDev-max/TTL-Legacy/actions/workflows/ci.yml/badge.svg?label=OpenAPI)](docs/openapi.yaml)
+[![CI](https://github.com/NnamdiCyber/TTL-Legacy-Vault/actions/workflows/ci.yml/badge.svg)](https://github.com/NnamdiCyber/TTL-Legacy-Vault/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/NnamdiCyber/TTL-Legacy-Vault/branch/main/graph/badge.svg)](https://codecov.io/gh/NnamdiCyber/TTL-Legacy-Vault)
+[![OpenAPI Valid](https://github.com/NnamdiCyber/TTL-Legacy-Vault/actions/workflows/ci.yml/badge.svg?label=OpenAPI)](docs/openapi.yaml)
 
 A decentralized "Dead Man's Switch" built on Stellar/Soroban smart contracts.
 
