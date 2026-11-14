@@ -56,7 +56,7 @@ jsonwebtoken = "9"
 redis = "0.27"
 
 # Recovery code generation and hashing
-rand = "0.8"
+rand = "0.10"
 sha2 = "0.10"
 
 [dev-dependencies]
