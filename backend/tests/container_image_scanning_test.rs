@@ -21,8 +21,7 @@ mod container_image_scanning {
     #[test]
     fn dockerfile_uses_multi_stage_build() {
         let dockerfile_path = "backend/Dockerfile";
-        let content = fs::read_to_string(dockerfile_path)
-            .expect("Failed to read Dockerfile");
+        let content = fs::read_to_string(dockerfile_path).expect("Failed to read Dockerfile");
 
         assert!(
             content.contains("FROM") && content.matches("FROM").count() >= 2,
@@ -34,10 +33,10 @@ mod container_image_scanning {
     #[test]
     fn base_image_is_explicit() {
         let dockerfile_path = "backend/Dockerfile";
-        let content = fs::read_to_string(dockerfile_path)
-            .expect("Failed to read Dockerfile");
+        let content = fs::read_to_string(dockerfile_path).expect("Failed to read Dockerfile");
 
-        let first_from = content.lines()
+        let first_from = content
+            .lines()
             .find(|line| line.trim().starts_with("FROM"))
             .expect("Dockerfile should contain at least one FROM statement");
 
@@ -52,8 +51,7 @@ mod container_image_scanning {
     #[test]
     fn docker_compose_references_dockerfile() {
         let compose_path = "docker-compose.yml";
-        let content = fs::read_to_string(compose_path)
-            .expect("Failed to read docker-compose.yml");
+        let content = fs::read_to_string(compose_path).expect("Failed to read docker-compose.yml");
 
         assert!(
             content.contains("build:") || content.contains("image:"),
@@ -65,8 +63,7 @@ mod container_image_scanning {
     #[test]
     fn dockerfile_uses_non_root_user() {
         let dockerfile_path = "backend/Dockerfile";
-        let content = fs::read_to_string(dockerfile_path)
-            .expect("Failed to read Dockerfile");
+        let content = fs::read_to_string(dockerfile_path).expect("Failed to read Dockerfile");
 
         assert!(
             content.contains("USER"),
@@ -86,8 +83,8 @@ mod container_image_scanning {
     /// Verifies that .dockerignore exists to reduce image context
     #[test]
     fn dockerignore_exists() {
-        let has_dockerignore = Path::new(".dockerignore").exists()
-            || Path::new("backend/.dockerignore").exists();
+        let has_dockerignore =
+            Path::new(".dockerignore").exists() || Path::new("backend/.dockerignore").exists();
 
         // This is a recommendation, but good practice for reducing image size
         println!("✓ Docker ignore file should exist to reduce build context");
@@ -97,15 +94,9 @@ mod container_image_scanning {
     #[test]
     fn dockerfile_has_no_hardcoded_secrets() {
         let dockerfile_path = "backend/Dockerfile";
-        let content = fs::read_to_string(dockerfile_path)
-            .expect("Failed to read Dockerfile");
+        let content = fs::read_to_string(dockerfile_path).expect("Failed to read Dockerfile");
 
-        let suspicious_patterns = vec![
-            "PASSWORD=",
-            "SECRET=",
-            "API_KEY=",
-            "TOKEN=",
-        ];
+        let suspicious_patterns = vec!["PASSWORD=", "SECRET=", "API_KEY=", "TOKEN="];
 
         for pattern in suspicious_patterns {
             assert!(

@@ -48,9 +48,8 @@ static USED_TOTP_STEPS: once_cell::sync::Lazy<Mutex<HashMap<String, u64>>> =
 const ENC_PREFIX: &str = "enc:v1:";
 
 fn primary_key() -> Result<[u8; 32], AppError> {
-    let raw = std::env::var("TOTP_ENCRYPTION_KEY").map_err(|_| {
-        AppError::Internal("TOTP_ENCRYPTION_KEY is not configured".into())
-    })?;
+    let raw = std::env::var("TOTP_ENCRYPTION_KEY")
+        .map_err(|_| AppError::Internal("TOTP_ENCRYPTION_KEY is not configured".into()))?;
     derive_key(&raw)
 }
 
@@ -128,8 +127,8 @@ fn decrypt_secret(stored: &str) -> Result<String, AppError> {
     let (nonce_hex, ct_hex) = rest
         .split_once(':')
         .ok_or_else(|| AppError::Internal("malformed encrypted secret".into()))?;
-    let nonce_bytes = hex_decode(nonce_hex)
-        .ok_or_else(|| AppError::Internal("malformed nonce".into()))?;
+    let nonce_bytes =
+        hex_decode(nonce_hex).ok_or_else(|| AppError::Internal("malformed nonce".into()))?;
     let ct = hex_decode(ct_hex).ok_or_else(|| AppError::Internal("malformed ciphertext".into()))?;
     if nonce_bytes.len() != 16 {
         return Err(AppError::Internal("malformed nonce length".into()));
@@ -580,7 +579,10 @@ mod tests {
         let old_ct = encrypt_secret(&secret).expect("encrypt");
 
         // Rotate: new primary key, old key retained for decryption.
-        std::env::set_var("TOTP_ENCRYPTION_KEY_PREVIOUS", "0123456789abcdef0123456789abcdef");
+        std::env::set_var(
+            "TOTP_ENCRYPTION_KEY_PREVIOUS",
+            "0123456789abcdef0123456789abcdef",
+        );
         std::env::set_var("TOTP_ENCRYPTION_KEY", "fedcba9876543210fedcba9876543210");
         assert_eq!(decrypt_secret(&old_ct).expect("decrypt old"), secret);
 

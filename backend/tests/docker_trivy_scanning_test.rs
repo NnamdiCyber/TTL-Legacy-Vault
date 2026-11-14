@@ -36,7 +36,8 @@ mod docker_trivy_scanning {
             .expect("Failed to read release workflow");
 
         let trivy_section = content.split("trivy").next().unwrap_or("");
-        let has_docker_target = trivy_section.contains("Dockerfile") || trivy_section.contains("image")
+        let has_docker_target = trivy_section.contains("Dockerfile")
+            || trivy_section.contains("image")
             || trivy_section.contains("backend");
 
         assert!(
@@ -51,8 +52,10 @@ mod docker_trivy_scanning {
         let content = fs::read_to_string(".github/workflows/release.yml")
             .expect("Failed to read release workflow");
 
-        let has_severity_check = content.contains("critical") || content.contains("CRITICAL")
-            || content.contains("severity") || content.contains("exit 1");
+        let has_severity_check = content.contains("critical")
+            || content.contains("CRITICAL")
+            || content.contains("severity")
+            || content.contains("exit 1");
 
         assert!(
             has_severity_check,
@@ -100,7 +103,8 @@ mod docker_trivy_scanning {
         let content = fs::read_to_string(".github/workflows/release.yml")
             .expect("Failed to read release workflow");
 
-        let has_build_step = content.contains("docker build") || content.contains("Build")
+        let has_build_step = content.contains("docker build")
+            || content.contains("Build")
             || content.contains("build");
 
         assert!(
@@ -116,12 +120,11 @@ mod docker_trivy_scanning {
             .expect("Failed to read release workflow");
 
         let trivy_section = content.split("trivy").next().unwrap_or("");
-        let has_output = trivy_section.contains("format") || trivy_section.contains("output")
-            || trivy_section.contains("json") || trivy_section.contains("table");
+        let has_output = trivy_section.contains("format")
+            || trivy_section.contains("output")
+            || trivy_section.contains("json")
+            || trivy_section.contains("table");
 
-        assert!(
-            has_output,
-            "Trivy scanning should capture formatted output"
-        );
+        assert!(has_output, "Trivy scanning should capture formatted output");
     }
 }

@@ -280,10 +280,7 @@ mod middleware_tests {
                 Request::builder()
                     .method("POST")
                     .uri("/api/data")
-                    .header(
-                        "cookie",
-                        "__Host-csrf=token-from-cookie; other=value",
-                    )
+                    .header("cookie", "__Host-csrf=token-from-cookie; other=value")
                     .header("x-csrf-token", "different-token-from-header")
                     .body(Body::empty())
                     .unwrap(),

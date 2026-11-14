@@ -220,10 +220,7 @@ mod tests {
             .unwrap();
 
         assert!(response.headers().contains_key("x-frame-options"));
-        assert_eq!(
-            response.headers().get("x-frame-options").unwrap(),
-            "DENY"
-        );
+        assert_eq!(response.headers().get("x-frame-options").unwrap(), "DENY");
     }
 
     #[tokio::test]

@@ -1,7 +1,12 @@
 #![cfg(test)]
 
 use super::*;
-use soroban_sdk::{bytes, testutils::Events as _, Bytes, Env};
+use soroban_sdk::{
+    bytes,
+    testutils::{Address as _, Events as _},
+    Bytes, Env,
+};
+type Error = VerifierError;
 
 fn setup() -> (Env, Address, ZkVerifierContractClient<'static>) {
     let env = Env::default();
@@ -89,7 +94,7 @@ fn test_different_proof_not_validated_after_attestation() {
     let claim = bytes!(&env, 0xcafebabe);
     client.attest(&oracle, &proof, &claim);
 
-    let other_proof = bytes!(&env, 0x1234);
+    let other_proof = bytes!(&env, 0x12345678);
     assert!(!client.verify_claim(&other_proof, &claim));
 }
 
@@ -115,7 +120,7 @@ fn test_revoked_oracle_attestation_no_longer_accepted() {
 }
 
 #[test]
-#[should_panic(expected = "Error(Contract, #4)")]
+#[should_panic(expected = "Error(Contract, #7)")]
 fn test_unregistered_oracle_cannot_attest() {
     let (env, _, client) = setup();
     let rogue = Address::generate(&env);
@@ -154,10 +159,13 @@ fn test_double_initialize_fails() {
 /// Proof at exactly MAX_PROOF_SIZE — must succeed.
 #[test]
 fn test_proof_at_max_size_succeeds() {
-    let (env, client) = setup();
+    let (env, _, client) = setup();
+    let oracle = Address::generate(&env);
+    client.register_oracle(&oracle);
     let data = [0xffu8; MAX_PROOF_SIZE as usize];
     let proof = Bytes::from_slice(&env, &data);
     let claim = bytes!(&env, 0xcafebabe);
+    client.attest(&oracle, &proof, &claim);
     assert!(client.verify_claim(&proof, &claim));
 }
 
@@ -165,7 +173,7 @@ fn test_proof_at_max_size_succeeds() {
 #[test]
 #[should_panic(expected = "Error(Contract, #3)")]
 fn test_proof_exceeds_max_size_panics() {
-    let (env, client) = setup();
+    let (env, _, client) = setup();
     let data = [0xffu8; MAX_PROOF_SIZE as usize + 1];
     let proof = Bytes::from_slice(&env, &data);
     let claim = bytes!(&env, 0xcafebabe);
@@ -175,10 +183,13 @@ fn test_proof_exceeds_max_size_panics() {
 /// Claim at exactly MAX_CLAIM_SIZE — must succeed.
 #[test]
 fn test_claim_at_max_size_succeeds() {
-    let (env, client) = setup();
+    let (env, _, client) = setup();
+    let oracle = Address::generate(&env);
+    client.register_oracle(&oracle);
     let proof = bytes!(&env, 0xdeadbeef);
     let data = [0xaau8; MAX_CLAIM_SIZE as usize];
     let claim = Bytes::from_slice(&env, &data);
+    client.attest(&oracle, &proof, &claim);
     assert!(client.verify_claim(&proof, &claim));
 }
 
@@ -186,7 +197,7 @@ fn test_claim_at_max_size_succeeds() {
 #[test]
 #[should_panic(expected = "Error(Contract, #4)")]
 fn test_claim_exceeds_max_size_panics() {
-    let (env, client) = setup();
+    let (env, _, client) = setup();
     let proof = bytes!(&env, 0xdeadbeef);
     let data = [0xaau8; MAX_CLAIM_SIZE as usize + 1];
     let claim = Bytes::from_slice(&env, &data);
@@ -198,7 +209,7 @@ fn test_claim_exceeds_max_size_panics() {
 /// Proof shorter than MIN_PROOF_SIZE — must return ProofTooShort (#6).
 #[test]
 fn test_proof_below_min_size_returns_typed_error() {
-    let (env, client) = setup();
+    let (env, _, client) = setup();
     let data = [0xffu8; MIN_PROOF_SIZE as usize - 1];
     let proof = Bytes::from_slice(&env, &data);
     let claim = bytes!(&env, 0xcafebabe);
@@ -211,17 +222,20 @@ fn test_proof_below_min_size_returns_typed_error() {
 /// Proof at exactly MIN_PROOF_SIZE — must succeed.
 #[test]
 fn test_proof_at_min_size_succeeds() {
-    let (env, client) = setup();
+    let (env, _, client) = setup();
+    let oracle = Address::generate(&env);
+    client.register_oracle(&oracle);
     let data = [0xffu8; MIN_PROOF_SIZE as usize];
     let proof = Bytes::from_slice(&env, &data);
     let claim = bytes!(&env, 0xcafebabe);
+    client.attest(&oracle, &proof, &claim);
     assert!(client.verify_claim(&proof, &claim));
 }
 
 /// Claim shorter than MIN_CLAIM_SIZE — must return ClaimTooShort (#7).
 #[test]
 fn test_claim_below_min_size_returns_typed_error() {
-    let (env, client) = setup();
+    let (env, _, client) = setup();
     let proof = bytes!(&env, 0xdeadbeef);
     let data = [0xaau8; MIN_CLAIM_SIZE as usize - 1];
     let claim = Bytes::from_slice(&env, &data);
@@ -234,10 +248,13 @@ fn test_claim_below_min_size_returns_typed_error() {
 /// Claim at exactly MIN_CLAIM_SIZE — must succeed.
 #[test]
 fn test_claim_at_min_size_succeeds() {
-    let (env, client) = setup();
+    let (env, _, client) = setup();
+    let oracle = Address::generate(&env);
+    client.register_oracle(&oracle);
     let proof = bytes!(&env, 0xdeadbeef);
     let data = [0xaau8; MIN_CLAIM_SIZE as usize];
     let claim = Bytes::from_slice(&env, &data);
+    client.attest(&oracle, &proof, &claim);
     assert!(client.verify_claim(&proof, &claim));
 }
 
@@ -245,7 +262,7 @@ fn test_claim_at_min_size_succeeds() {
 /// verification, returning the typed ProofTooShort error.
 #[test]
 fn test_malformed_short_proof_rejected() {
-    let (env, client) = setup();
+    let (env, _, client) = setup();
     let proof = bytes!(&env, 0x01);
     let claim = bytes!(&env, 0xcafebabe);
     assert_eq!(
@@ -258,7 +275,7 @@ fn test_malformed_short_proof_rejected() {
 /// verification, returning the typed ClaimTooShort error.
 #[test]
 fn test_malformed_short_claim_rejected() {
-    let (env, client) = setup();
+    let (env, _, client) = setup();
     let proof = bytes!(&env, 0xdeadbeef);
     let claim = bytes!(&env, 0x01);
     assert_eq!(
@@ -272,9 +289,12 @@ fn test_malformed_short_claim_rejected() {
 /// verify_claim with a valid proof must emit exactly one vfy_claim event.
 #[test]
 fn test_verify_claim_emits_event_on_true_result() {
-    let (env, client) = setup();
+    let (env, _, client) = setup();
+    let oracle = Address::generate(&env);
+    client.register_oracle(&oracle);
     let proof = bytes!(&env, 0xdeadbeef);
     let claim = bytes!(&env, 0xcafebabe);
+    client.attest(&oracle, &proof, &claim);
     let result = client.verify_claim(&proof, &claim);
     assert!(result);
     assert_eq!(env.events().all().len(), 1);
@@ -284,8 +304,8 @@ fn test_verify_claim_emits_event_on_true_result() {
 /// even when the result is false.
 #[test]
 fn test_verify_claim_emits_event_on_false_result() {
-    let (env, client) = setup();
-    let proof = bytes!(&env, 0x00); // known-invalid sentinel → result = false
+    let (env, _, client) = setup();
+    let proof = bytes!(&env, 0x00000000); // unattested → result = false
     let claim = bytes!(&env, 0xcafebabe);
     let result = client.verify_claim(&proof, &claim);
     assert!(!result);

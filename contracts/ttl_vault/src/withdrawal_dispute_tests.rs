@@ -147,7 +147,10 @@ fn test_batch_withdrawals_at_same_timestamp_can_be_disputed_individually() {
 
     let disputes = f.client.get_withdrawal_disputes(&f.vault_id);
     assert_eq!(disputes.len(), 2u32);
-    assert_eq!(disputes.get(0).unwrap().withdrawal_timestamp, disputes.get(1).unwrap().withdrawal_timestamp);
+    assert_eq!(
+        disputes.get(0).unwrap().withdrawal_timestamp,
+        disputes.get(1).unwrap().withdrawal_timestamp
+    );
 }
 
 #[test]
@@ -296,7 +299,9 @@ fn test_dispute_withdrawal_failed_entry_not_disputable() {
     f.client.deposit(&vault_id_2, &f.owner, &500_000);
 
     // Attempt withdrawal larger than balance → recorded as failure.
-    let _ = f.client.try_withdraw(&vault_id_2, &f.owner, &999_999_999, &None, &None, &None);
+    let _ = f
+        .client
+        .try_withdraw(&vault_id_2, &f.owner, &999_999_999, &None, &None, &None);
 
     // Now audit log index 0 for vault_id_2 is a failed entry.
     let result = f.client.try_dispute_withdrawal(
@@ -342,7 +347,8 @@ fn test_dispute_withdrawal_second_withdrawal_can_be_disputed_independently() {
     f.env.ledger().with_mut(|l| {
         l.timestamp += 60; // 1 minute later
     });
-    f.client.withdraw(&f.vault_id, &f.owner, &500_000, &None, &None, &None);
+    f.client
+        .withdraw(&f.vault_id, &f.owner, &500_000, &None, &None, &None);
 
     // Dispute first withdrawal.
     f.client.dispute_withdrawal(
@@ -521,7 +527,8 @@ fn test_get_withdrawal_disputes_returns_all_disputes() {
     f.env.ledger().with_mut(|l| {
         l.timestamp += 30;
     });
-    f.client.withdraw(&f.vault_id, &f.owner, &200_000, &None, &None, &None);
+    f.client
+        .withdraw(&f.vault_id, &f.owner, &200_000, &None, &None, &None);
 
     f.client.dispute_withdrawal(
         &f.vault_id,
@@ -549,7 +556,8 @@ fn test_disputes_are_per_vault() {
         .client
         .create_vault(&f.owner, &f.beneficiary, &3600u64, &None);
     f.client.deposit(&vault_id_2, &f.owner, &3_000_000);
-    f.client.withdraw(&vault_id_2, &f.owner, &500_000, &None, &None, &None);
+    f.client
+        .withdraw(&vault_id_2, &f.owner, &500_000, &None, &None, &None);
 
     // File dispute only on vault 1.
     f.client.dispute_withdrawal(

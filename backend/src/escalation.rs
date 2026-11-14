@@ -148,16 +148,12 @@ async fn dispatch_escalation(db: &Arc<Db>, vault_id: u64, tier: EscalationTier) 
     } else {
         AuditOutcome::Failure
     };
-    let audit = AuditLog::new(
-        "escalation.dispatch",
-        format!("vault:{vault_id}"),
-        outcome,
-    )
-    .with_metadata(serde_json::json!({
-        "tier": format!("{:?}", tier).to_lowercase(),
-        "channels": channels,
-        "delivered": delivered,
-    }));
+    let audit = AuditLog::new("escalation.dispatch", format!("vault:{vault_id}"), outcome)
+        .with_metadata(serde_json::json!({
+            "tier": format!("{:?}", tier).to_lowercase(),
+            "channels": channels,
+            "delivered": delivered,
+        }));
     if let Err(e) = db.insert_audit_log(&audit) {
         tracing::error!(vault_id, error = %e, "escalation: failed to record audit log");
     }
@@ -216,14 +212,17 @@ async fn send_escalation_notifications(
     for channel in notification_channels_for_tier(tier) {
         let notification = Notification::new(
             format!("Vault {vault_id} escalation {tier:?}"),
-            format!(
-                "Vault {vault_id} requires attention: escalation tier {tier:?} triggered."
-            ),
+            format!("Vault {vault_id} requires attention: escalation tier {tier:?} triggered."),
             channel,
         );
         match provider.send(&notification).await {
             Ok(_) => {
-                tracing::info!(vault_id, ?tier, ?channel, "escalation: notification delivered");
+                tracing::info!(
+                    vault_id,
+                    ?tier,
+                    ?channel,
+                    "escalation: notification delivered"
+                );
             }
             Err(e) => {
                 all_delivered = false;
@@ -291,7 +290,10 @@ async fn send_slack_alert(vault_id: u64, tier: EscalationTier) -> bool {
 async fn fetch_ttl_hours(db: &Arc<Db>, vault_id: u64) -> u32 {
     match db.get_vault_ttl(vault_id) {
         Ok(Some(ttl)) => {
-            let remaining = ttl.expires_at.signed_duration_since(Utc::now()).num_seconds();
+            let remaining = ttl
+                .expires_at
+                .signed_duration_since(Utc::now())
+                .num_seconds();
             if remaining <= 0 {
                 0
             } else {
@@ -400,7 +402,10 @@ mod tests {
         // Simulate a check-in by clearing escalation state.
         db.clear_escalation_state(123).unwrap();
         let cleared_state = db.get_escalation_state(123).unwrap();
-        assert!(cleared_state.is_none(), "escalation state should be cleared after check-in");
+        assert!(
+            cleared_state.is_none(),
+            "escalation state should be cleared after check-in"
+        );
 
         // TTL is still within T1 range, but since state is cleared,
         // a new escalation should be dispatched on re-evaluation.
@@ -471,6 +476,9 @@ mod tests {
         db.upsert_escalation_state(&state).unwrap();
         evaluate_vault(&db, 300, 12).await;
         let t3_events = db.get_escalation_events(300).unwrap();
-        assert_eq!(t3_events[0].channels, vec!["email", "sms", "emergency_contact"]);
+        assert_eq!(
+            t3_events[0].channels,
+            vec!["email", "sms", "emergency_contact"]
+        );
     }
 }

@@ -111,7 +111,13 @@ fn test_vesting_rejects_cliff_after_end() {
 
     // duration = 100 * 4 = 400, cliff = 401 > duration
     let res = client.try_set_vesting_schedule(
-        &vault_id, &owner, &10_000u64, &100u64, &4u32, &1_000_000i128, &401u64,
+        &vault_id,
+        &owner,
+        &10_000u64,
+        &100u64,
+        &4u32,
+        &1_000_000i128,
+        &401u64,
     );
     assert_eq!(res, Err(Ok(ContractError::VestingCliffAfterEnd)));
 }
@@ -123,7 +129,13 @@ fn test_vesting_accepts_cliff_equal_to_end() {
     client.deposit(&vault_id, &owner, &1_000_000);
 
     let res = client.try_set_vesting_schedule(
-        &vault_id, &owner, &10_000u64, &100u64, &4u32, &1_000_000i128, &400u64,
+        &vault_id,
+        &owner,
+        &10_000u64,
+        &100u64,
+        &4u32,
+        &1_000_000i128,
+        &400u64,
     );
     assert!(res.is_ok());
 }
@@ -135,7 +147,13 @@ fn test_vesting_rejects_zero_interval() {
     client.deposit(&vault_id, &owner, &1_000_000);
 
     let res = client.try_set_vesting_schedule(
-        &vault_id, &owner, &10_000u64, &0u64, &4u32, &1_000_000i128, &0u64,
+        &vault_id,
+        &owner,
+        &10_000u64,
+        &0u64,
+        &4u32,
+        &1_000_000i128,
+        &0u64,
     );
     assert_eq!(res, Err(Ok(ContractError::InvalidInterval)));
 }
@@ -147,7 +165,13 @@ fn test_vesting_rejects_overflowing_end() {
     client.deposit(&vault_id, &owner, &1_000_000);
 
     let res = client.try_set_vesting_schedule(
-        &vault_id, &owner, &(u64::MAX - 10), &100u64, &4u32, &1_000_000i128, &0u64,
+        &vault_id,
+        &owner,
+        &(u64::MAX - 10),
+        &100u64,
+        &4u32,
+        &1_000_000i128,
+        &0u64,
     );
     assert_eq!(res, Err(Ok(ContractError::InvalidVestingSchedule)));
 }
@@ -159,7 +183,13 @@ fn test_vesting_rejects_overflowing_cliff() {
     client.deposit(&vault_id, &owner, &1_000_000);
 
     let res = client.try_set_vesting_schedule(
-        &vault_id, &owner, &10_000u64, &100u64, &4u32, &1_000_000i128, &u64::MAX,
+        &vault_id,
+        &owner,
+        &10_000u64,
+        &100u64,
+        &4u32,
+        &1_000_000i128,
+        &u64::MAX,
     );
     assert_eq!(res, Err(Ok(ContractError::VestingCliffAfterEnd)));
 }
@@ -176,7 +206,14 @@ fn setup_released_schedule(
     num_installments: u32,
     total: i128,
     cliff_period: u64,
-) -> (Env, Address, Address, u64, u64, TtlVaultContractClient<'static>) {
+) -> (
+    Env,
+    Address,
+    Address,
+    u64,
+    u64,
+    TtlVaultContractClient<'static>,
+) {
     let (env, owner, beneficiary, token_address, client) = setup();
     let vault_id = client.create_vault(&owner, &beneficiary, &INTERVAL, &None);
     client.deposit(&vault_id, &owner, &total);
@@ -196,7 +233,14 @@ fn setup_released_schedule(
     env.ledger().set_timestamp(INTERVAL + 1);
     client.trigger_release(&vault_id);
 
-    (env, beneficiary, token_address, vault_id, start_time, client)
+    (
+        env,
+        beneficiary,
+        token_address,
+        vault_id,
+        start_time,
+        client,
+    )
 }
 
 proptest! {
@@ -275,7 +319,12 @@ fn test_whitelist_entry_valid_until_expiry_ledger() {
         &expiry,
     );
     assert_eq!(
-        client.get_whitelist(&vault_id).unwrap().get(0).unwrap().expires_at_ledger,
+        client
+            .get_whitelist(&vault_id)
+            .unwrap()
+            .get(0)
+            .unwrap()
+            .expires_at_ledger,
         expiry
     );
 

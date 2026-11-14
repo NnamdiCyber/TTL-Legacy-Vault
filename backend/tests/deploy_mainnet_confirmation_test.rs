@@ -47,8 +47,10 @@ mod deploy_mainnet_confirmation {
         let content = fs::read_to_string("scripts/deploy_mainnet.sh")
             .expect("Failed to read deploy_mainnet.sh");
 
-        let has_wasm_info = content.contains("WASM") || content.contains("wasm")
-            || content.contains("CONTRACT") || content.contains("contract");
+        let has_wasm_info = content.contains("WASM")
+            || content.contains("wasm")
+            || content.contains("CONTRACT")
+            || content.contains("contract");
 
         assert!(
             has_wasm_info,
@@ -86,7 +88,8 @@ mod deploy_mainnet_confirmation {
         let content = fs::read_to_string("scripts/deploy_mainnet.sh")
             .expect("Failed to read deploy_mainnet.sh");
 
-        let has_validation = content.contains("!=") || content.contains("=") || content.contains("CONFIRM");
+        let has_validation =
+            content.contains("!=") || content.contains("=") || content.contains("CONFIRM");
         assert!(
             has_validation,
             "confirmation prompt should validate user input"
@@ -98,8 +101,7 @@ mod deploy_mainnet_confirmation {
     fn deploy_utils_has_confirmation_helper() {
         let utils_path = "scripts/deploy_utils.sh";
         if Path::new(utils_path).exists() {
-            let content = fs::read_to_string(utils_path)
-                .expect("Failed to read deploy_utils.sh");
+            let content = fs::read_to_string(utils_path).expect("Failed to read deploy_utils.sh");
 
             let has_confirm = content.contains("confirm") || content.contains("CONFIRM");
             if has_confirm {

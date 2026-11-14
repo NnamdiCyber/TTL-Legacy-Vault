@@ -411,7 +411,8 @@ fn test_attest_milestone_rejects_stale_oracle_timestamp() {
 
     // Advance ledger time well past the freshness window (301 seconds ahead of oracle_timestamp)
     let oracle_timestamp: u64 = 1_000;
-    env.ledger().with_mut(|l| l.set_timestamp(oracle_timestamp + 301));
+    env.ledger()
+        .with_mut(|l| l.set_timestamp(oracle_timestamp + 301));
 
     // Attestation with a stale timestamp must be rejected
     client.attest_milestone(&vault_id, &0, &oracle_timestamp);
@@ -428,7 +429,8 @@ fn test_attest_milestone_accepts_timestamp_at_boundary() {
 
     // oracle_timestamp is exactly ORACLE_FRESHNESS_WINDOW (300 s) in the past — still valid
     let oracle_timestamp: u64 = 1_000;
-    env.ledger().with_mut(|l| l.set_timestamp(oracle_timestamp + 300));
+    env.ledger()
+        .with_mut(|l| l.set_timestamp(oracle_timestamp + 300));
 
     client.attest_milestone(&vault_id, &0, &oracle_timestamp);
 }

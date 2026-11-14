@@ -121,16 +121,15 @@ describe("ErrorBoundary", () => {
     // Fallback is visible
     expect(screen.getByRole("alert")).toBeInTheDocument();
 
-    // Click retry → boundary resets
-    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
-
-    // After reset the boundary tries to render children again.  Re-render with
-    // a non-throwing child to simulate the fixed state.
+    // Update child prop to non-throwing state before clicking retry
     rerender(
       <ErrorBoundary>
         <ThrowingComponent shouldThrow={false} />
       </ErrorBoundary>
     );
+
+    // Click retry → boundary resets and renders recovered child
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.getByTestId("child-content")).toBeInTheDocument();

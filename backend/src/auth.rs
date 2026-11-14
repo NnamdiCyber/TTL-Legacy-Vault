@@ -395,7 +395,9 @@ mod tests {
             .to_owned();
 
         // Extract the body token.
-        let body_bytes = to_bytes(http_response.into_body(), usize::MAX).await.unwrap();
+        let body_bytes = to_bytes(http_response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let pair: TokenPairResponse = serde_json::from_slice(&body_bytes).unwrap();
 
         // The cookie must contain the same token as the body.

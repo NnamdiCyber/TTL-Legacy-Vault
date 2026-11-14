@@ -10,10 +10,7 @@ mod environment_variables_documentation {
     #[test]
     fn deployment_guide_file_exists() {
         let path = Path::new("docs/deployment-guide.md");
-        assert!(
-            path.exists(),
-            "docs/deployment-guide.md should exist"
-        );
+        assert!(path.exists(), "docs/deployment-guide.md should exist");
     }
 
     /// Verifies that .env.example file exists
@@ -35,9 +32,9 @@ mod environment_variables_documentation {
         let content = fs::read_to_string("docs/deployment-guide.md")
             .expect("Failed to read docs/deployment-guide.md");
 
-        let has_env_section = content.to_lowercase().contains("environment") ||
-            content.to_lowercase().contains("variable") ||
-            content.to_lowercase().contains("env");
+        let has_env_section = content.to_lowercase().contains("environment")
+            || content.to_lowercase().contains("variable")
+            || content.to_lowercase().contains("env");
 
         assert!(
             has_env_section,
@@ -60,9 +57,8 @@ mod environment_variables_documentation {
     fn env_example_includes_database_config() {
         let content = get_env_example_content();
 
-        let has_database = content.contains("DATABASE") ||
-            content.contains("DB_") ||
-            content.contains("POSTGRES");
+        let has_database =
+            content.contains("DATABASE") || content.contains("DB_") || content.contains("POSTGRES");
 
         assert!(
             has_database,
@@ -114,9 +110,9 @@ mod environment_variables_documentation {
         let content = fs::read_to_string("docs/deployment-guide.md")
             .expect("Failed to read docs/deployment-guide.md");
 
-        let has_required = content.to_lowercase().contains("required") ||
-            content.to_lowercase().contains("mandatory") ||
-            content.to_lowercase().contains("must");
+        let has_required = content.to_lowercase().contains("required")
+            || content.to_lowercase().contains("mandatory")
+            || content.to_lowercase().contains("must");
 
         assert!(
             has_required,
@@ -129,8 +125,8 @@ mod environment_variables_documentation {
     fn env_example_includes_sample_values() {
         let content = get_env_example_content();
 
-        let has_values = content.contains("=") &&
-            content.lines().filter(|l| l.contains("=")).count() > 3;
+        let has_values =
+            content.contains("=") && content.lines().filter(|l| l.contains("=")).count() > 3;
 
         assert!(
             has_values,
@@ -155,7 +151,8 @@ mod environment_variables_documentation {
     fn env_variables_follow_conventions() {
         let content = get_env_example_content();
 
-        let lines: Vec<&str> = content.lines()
+        let lines: Vec<&str> = content
+            .lines()
             .filter(|l| !l.trim().is_empty() && !l.trim().starts_with("#"))
             .collect();
 
@@ -195,11 +192,9 @@ mod environment_variables_documentation {
         let alt_path = Path::new("backend/.env.example");
 
         if path.exists() {
-            fs::read_to_string(path)
-                .expect("Failed to read .env.example")
+            fs::read_to_string(path).expect("Failed to read .env.example")
         } else if alt_path.exists() {
-            fs::read_to_string(alt_path)
-                .expect("Failed to read backend/.env.example")
+            fs::read_to_string(alt_path).expect("Failed to read backend/.env.example")
         } else {
             panic!(".env.example not found");
         }

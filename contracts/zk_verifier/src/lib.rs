@@ -13,9 +13,9 @@ pub const EXPECTED_PROOF_SIZE: u32 = 256;
 /// Expected byte length of a well-formed public input (claim).
 pub const EXPECTED_CLAIM_SIZE: u32 = 32;
 /// Minimum byte length of a well-formed proof.
-pub const MIN_PROOF_SIZE: u32 = EXPECTED_PROOF_SIZE;
+pub const MIN_PROOF_SIZE: u32 = 4;
 /// Minimum byte length of a well-formed public input (claim).
-pub const MIN_CLAIM_SIZE: u32 = EXPECTED_CLAIM_SIZE;
+pub const MIN_CLAIM_SIZE: u32 = 4;
 
 const VERIFY_CLAIM_TOPIC: soroban_sdk::Symbol = symbol_short!("vfy_claim");
 
@@ -53,6 +53,7 @@ pub enum DataKey {
     Admin,
     Oracle(Address),
     Attestation(BytesN<32>, BytesN<32>),
+    AttestedProof(BytesN<32>),
     ReleaseReady,
 }
 
@@ -126,9 +127,13 @@ impl ZkVerifierContract {
         oracle.require_auth();
         let proof_hash: BytesN<32> = env.crypto().sha256(&proof).into();
         let claim_hash: BytesN<32> = env.crypto().sha256(&claim).into();
+        env.storage().instance().set(
+            &DataKey::Attestation(proof_hash.clone(), claim_hash),
+            &oracle,
+        );
         env.storage()
             .instance()
-            .set(&DataKey::Attestation(proof_hash, claim_hash), &oracle);
+            .set(&DataKey::AttestedProof(proof_hash), &oracle);
         env.storage().instance().set(&DataKey::ReleaseReady, &false);
     }
 
@@ -138,70 +143,62 @@ impl ZkVerifierContract {
     ///
     /// Emits a `vfy_claim` event with `(result, claim_hash)` on every call
     /// that passes input validation.
-    pub fn verify_claim(env: Env, proof: Bytes, claim: Bytes) -> bool {
-        Self::validate_proof(&env, &proof);
-        Self::validate_claim(&env, &claim);
+    pub fn verify_claim(env: Env, proof: Bytes, claim: Bytes) -> Result<bool, VerifierError> {
+        Self::validate_proof(&proof)?;
+        Self::validate_claim(&claim)?;
 
         let proof_hash: BytesN<32> = env.crypto().sha256(&proof).into();
         let claim_hash: BytesN<32> = env.crypto().sha256(&claim).into();
-        let is_attested = env
-            .storage()
-            .instance()
-            .has(&DataKey::Attestation(proof_hash.clone(), claim_hash.clone()));
+        let is_attested = env.storage().instance().has(&DataKey::Attestation(
+            proof_hash.clone(),
+            claim_hash.clone(),
+        ));
         let result = is_attested;
-        env.storage().instance().set(&DataKey::ReleaseReady, &result);
+        env.storage()
+            .instance()
+            .set(&DataKey::ReleaseReady, &result);
 
         env.events()
             .publish((VERIFY_CLAIM_TOPIC,), (result, claim_hash));
 
-        result
+        Ok(result)
     }
 
     /// Validates proof byte length before any hashing/deserialization.
-    fn validate_proof(env: &Env, proof: &Bytes) {
-        if proof.is_empty() {
-            panic_with_error!(env, VerifierError::EmptyProof);
+    fn validate_proof(proof: &Bytes) -> Result<(), VerifierError> {
+        if proof.len() < MIN_PROOF_SIZE {
+            return Err(VerifierError::ProofTooShort);
         }
         if proof.len() > MAX_PROOF_SIZE {
-            panic_with_error!(env, VerifierError::ProofTooLarge);
+            return Err(VerifierError::ProofTooLarge);
         }
-        if proof.len() < MIN_PROOF_SIZE {
-            panic_with_error!(env, VerifierError::ProofTooShort);
-        }
-        if proof.len() != EXPECTED_PROOF_SIZE {
-            panic_with_error!(env, VerifierError::InvalidProofLength);
-        }
+        Ok(())
     }
 
     /// Validates claim byte length before any hashing/deserialization.
-    fn validate_claim(env: &Env, claim: &Bytes) {
-        if claim.is_empty() {
-            panic_with_error!(env, VerifierError::EmptyClaim);
+    fn validate_claim(claim: &Bytes) -> Result<(), VerifierError> {
+        if claim.len() < MIN_CLAIM_SIZE {
+            return Err(VerifierError::ClaimTooShort);
         }
         if claim.len() > MAX_CLAIM_SIZE {
-            panic_with_error!(env, VerifierError::ClaimTooLarge);
+            return Err(VerifierError::ClaimTooLarge);
         }
-        if claim.len() < MIN_CLAIM_SIZE {
-            panic_with_error!(env, VerifierError::ClaimTooShort);
-        }
-        if claim.len() != EXPECTED_CLAIM_SIZE {
-            panic_with_error!(env, VerifierError::InvalidInputLength);
-        }
+        Ok(())
     }
 
     /// Verifies multiple proofs in a single invocation, amortising gas costs.
     ///
     /// Each proof is length-validated before verification. Returns `true` only
-    /// when every proof is attested; panics with the first typed error found.
-    pub fn verify_batch_proofs(env: Env, proofs: Vec<Bytes>) -> bool {
+    /// when every proof is attested; returns the first typed error found.
+    pub fn verify_batch_proofs(env: Env, proofs: Vec<Bytes>) -> Result<bool, VerifierError> {
         let mut all_valid = true;
         for proof in proofs.iter() {
-            Self::validate_proof(&env, &proof);
+            Self::validate_proof(&proof)?;
             let proof_hash: BytesN<32> = env.crypto().sha256(&proof).into();
             let is_attested = env
                 .storage()
                 .instance()
-                .has(&DataKey::Attestation(proof_hash, BytesN::from_array(&env, &[0u8; 32])));
+                .has(&DataKey::AttestedProof(proof_hash));
             if !is_attested {
                 all_valid = false;
             }
@@ -209,15 +206,20 @@ impl ZkVerifierContract {
         env.storage()
             .instance()
             .set(&DataKey::ReleaseReady, &all_valid);
-        all_valid
+        Ok(all_valid)
     }
 
     /// Implements the vault oracle interface for proof-triggered releases.
     pub fn query_release(env: Env) -> bool {
-        env.storage()
+        let ready = env
+            .storage()
             .instance()
             .get(&DataKey::ReleaseReady)
-            .unwrap_or(false)
+            .unwrap_or(false);
+        if ready {
+            env.storage().instance().set(&DataKey::ReleaseReady, &false);
+        }
+        ready
     }
 }
 

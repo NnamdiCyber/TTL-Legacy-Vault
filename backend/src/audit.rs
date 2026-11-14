@@ -225,7 +225,11 @@ pub async fn export_vault_audit(
         ));
     }
 
-    let format = query.format.as_deref().unwrap_or("csv").to_ascii_lowercase();
+    let format = query
+        .format
+        .as_deref()
+        .unwrap_or("csv")
+        .to_ascii_lowercase();
     let entries = db.list_vault_audit_logs(&vault_id).map_err(|e| {
         tracing::error!(error = %e, "failed to load vault audit logs");
         ApiError::new(
@@ -253,9 +257,8 @@ pub async fn export_vault_audit(
                 .into_response())
         }
         "csv" => {
-            let mut out = String::from(
-                "id,timestamp,user_id,action,resource,result,ip_address,details\n",
-            );
+            let mut out =
+                String::from("id,timestamp,user_id,action,resource,result,ip_address,details\n");
             for entry in &entries {
                 out.push_str(&csv_row(entry));
             }
@@ -415,7 +418,11 @@ pub async fn export_vault_state_transitions(
         )
     })?;
 
-    let format = query.format.as_deref().unwrap_or("csv").to_ascii_lowercase();
+    let format = query
+        .format
+        .as_deref()
+        .unwrap_or("csv")
+        .to_ascii_lowercase();
 
     match format.as_str() {
         "json" => {
@@ -569,7 +576,10 @@ mod tests {
 
     fn app(db: Arc<Db>) -> axum::Router {
         axum::Router::new()
-            .route("/vaults/:id/audit/export", axum::routing::get(export_vault_audit))
+            .route(
+                "/vaults/:id/audit/export",
+                axum::routing::get(export_vault_audit),
+            )
             .with_state(db)
     }
 

@@ -322,9 +322,7 @@ pub async fn fetch_contract_version_via_rpc(
         .and_then(|r| r.get("version"))
         .and_then(|v| v.as_u64())
         .map(|v| v as u32)
-        .ok_or_else(|| {
-            "Soroban RPC response missing result.version".to_string()
-        })
+        .ok_or_else(|| "Soroban RPC response missing result.version".to_string())
 }
 
 /// Parse MIN_CONTRACT_VERSION from environment variables.

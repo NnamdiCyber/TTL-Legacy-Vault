@@ -71,12 +71,7 @@ impl MemoryStore {
 
     /// Increment `key` and return `Ok(())` when the request is allowed, or
     /// `Err(retry_after_secs)` when the window quota is exhausted.
-    pub async fn check(
-        &self,
-        key: &str,
-        max_requests: u32,
-        window_secs: u64,
-    ) -> Result<(), u64> {
+    pub async fn check(&self, key: &str, max_requests: u32, window_secs: u64) -> Result<(), u64> {
         let mut store = self.entries.lock().await;
         let now = Instant::now();
         let entry = store.entry(key.to_string()).or_insert((0, now));
@@ -112,12 +107,7 @@ impl RedisStore {
     ///
     /// On any Redis error we fail open (allow the request) so a transient
     /// outage does not take down the API.
-    pub async fn check(
-        &self,
-        key: &str,
-        max_requests: u32,
-        window_secs: u64,
-    ) -> Result<(), u64> {
+    pub async fn check(&self, key: &str, max_requests: u32, window_secs: u64) -> Result<(), u64> {
         let mut conn = match self.client.get_async_connection().await {
             Ok(conn) => conn,
             Err(_) => return Ok(()),
@@ -216,9 +206,7 @@ impl TrustedProxy {
 /// Parse a comma-separated list of trusted proxy CIDRs (e.g. from the
 /// `TRUSTED_PROXIES` env var). Invalid entries are ignored.
 pub fn parse_trusted_proxies(list: &str) -> Vec<TrustedProxy> {
-    list.split(',')
-        .filter_map(TrustedProxy::parse)
-        .collect()
+    list.split(',').filter_map(TrustedProxy::parse).collect()
 }
 
 /// Resolve the trusted-proxy list from the environment.
@@ -516,10 +504,7 @@ mod tests {
         // Peer is not a trusted proxy, so spoofed headers must be ignored.
         let limiter = limiter_with_proxies("10.0.0.0/8");
         let peer: SocketAddr = "203.0.113.5:1234".parse().unwrap();
-        let headers = headers_with(&[
-            ("x-forwarded-for", "1.2.3.4"),
-            ("x-real-ip", "5.6.7.8"),
-        ]);
+        let headers = headers_with(&[("x-forwarded-for", "1.2.3.4"), ("x-real-ip", "5.6.7.8")]);
         assert_eq!(extract_client_ip(&limiter, peer, &headers), "203.0.113.5");
     }
 

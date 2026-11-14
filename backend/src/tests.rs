@@ -1984,14 +1984,16 @@ async fn test_reminder_email_does_not_contain_raw_vault_id() {
 /// per-user rate limiter.  The limiter uses a 1 req / 60s window so the
 /// *second* immediate request in the same test must return 429.
 fn checkin_rate_limit_app() -> Router {
-    use crate::rate_limit::{RateLimiter, RateLimitConfig, checkin_rate_limit_middleware};
+    use crate::rate_limit::{checkin_rate_limit_middleware, RateLimitConfig, RateLimiter};
 
     let limiter = RateLimiter::new(RateLimitConfig::new(1, 60));
 
     Router::new().route(
         "/api/vaults/:vault_id/check-in",
-        post(routes::check_in)
-            .layer(middleware::from_fn_with_state(limiter, checkin_rate_limit_middleware)),
+        post(routes::check_in).layer(middleware::from_fn_with_state(
+            limiter,
+            checkin_rate_limit_middleware,
+        )),
     )
 }
 
@@ -2012,7 +2014,9 @@ async fn test_checkin_first_request_succeeds() {
 
     assert_eq!(res.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["vault_id"], "vault-42");
     assert_eq!(json["message"], "Check-in recorded successfully");
@@ -2057,7 +2061,9 @@ async fn test_checkin_second_request_rate_limited() {
     assert_eq!(second.status(), StatusCode::TOO_MANY_REQUESTS);
     assert!(second.headers().contains_key("retry-after"));
 
-    let body = axum::body::to_bytes(second.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(second.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["error"], "rate_limit_exceeded");
 }
@@ -2100,25 +2106,32 @@ async fn test_checkin_different_vaults_independent_limits() {
 
 fn metrics_app() -> Router {
     use crate::metrics::Metrics;
-    use axum::{
-        extract::State,
-        response::IntoResponse,
-    };
+    use axum::{extract::State, response::IntoResponse};
 
     let metrics = Metrics::new();
-    metrics.vaults_total.store(42, std::sync::atomic::Ordering::Relaxed);
-    metrics.checkins_total.store(150, std::sync::atomic::Ordering::Relaxed);
-    metrics.releases_total.store(5, std::sync::atomic::Ordering::Relaxed);
-    metrics.active_vaults.store(37, std::sync::atomic::Ordering::Relaxed);
-    metrics.request_errors_total.store(3, std::sync::atomic::Ordering::Relaxed);
-    metrics.http_requests_total.store(500, std::sync::atomic::Ordering::Relaxed);
+    metrics
+        .vaults_total
+        .store(42, std::sync::atomic::Ordering::Relaxed);
+    metrics
+        .checkins_total
+        .store(150, std::sync::atomic::Ordering::Relaxed);
+    metrics
+        .releases_total
+        .store(5, std::sync::atomic::Ordering::Relaxed);
+    metrics
+        .active_vaults
+        .store(37, std::sync::atomic::Ordering::Relaxed);
+    metrics
+        .request_errors_total
+        .store(3, std::sync::atomic::Ordering::Relaxed);
+    metrics
+        .http_requests_total
+        .store(500, std::sync::atomic::Ordering::Relaxed);
 
     Router::new()
         .route(
             "/metrics",
-            get(|State(m): State<Arc<Metrics>>| async move {
-                m.render().into_response()
-            }),
+            get(|State(m): State<Arc<Metrics>>| async move { m.render().into_response() }),
         )
         .with_state(metrics)
 }
@@ -2152,7 +2165,9 @@ async fn test_metrics_endpoint_prometheus_format() {
         .await
         .unwrap();
 
-    let body = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let text = String::from_utf8(body.to_vec()).unwrap();
 
     assert!(text.contains("# HELP ttl_legacy_vaults_total"));
@@ -2173,7 +2188,9 @@ async fn test_metrics_endpoint_contains_request_counts() {
         .await
         .unwrap();
 
-    let body = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let text = String::from_utf8(body.to_vec()).unwrap();
 
     assert!(text.contains("ttl_legacy_http_requests_total 500"));
@@ -2193,7 +2210,9 @@ async fn test_metrics_endpoint_contains_checkin_rates() {
         .await
         .unwrap();
 
-    let body = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let text = String::from_utf8(body.to_vec()).unwrap();
 
     assert!(text.contains("ttl_legacy_checkins_total 150"));
@@ -2234,7 +2253,9 @@ async fn test_metrics_endpoint_includes_gauge_metrics() {
         .await
         .unwrap();
 
-    let body = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let text = String::from_utf8(body.to_vec()).unwrap();
 
     assert!(text.contains("# TYPE ttl_legacy_active_vaults gauge"));
@@ -2265,8 +2286,8 @@ fn test_otel_uses_default_endpoint() {
     // When OTEL_EXPORTER_OTLP_ENDPOINT is not set, it should default to localhost:4317
     // This is verified in the otel::try_init_tracer implementation
     let default_endpoint = "http://localhost:4317";
-    let env_var = env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
-        .unwrap_or_else(|_| default_endpoint.to_string());
+    let env_var =
+        env::var("OTEL_EXPORTER_OTLP_ENDPOINT").unwrap_or_else(|_| default_endpoint.to_string());
 
     assert_eq!(env_var, "http://localhost:4317");
 }
@@ -2293,8 +2314,8 @@ fn test_otel_respects_service_name_override() {
     let custom_name = "my-custom-service";
     env::set_var("OTEL_SERVICE_NAME", custom_name);
 
-    let service_name = env::var("OTEL_SERVICE_NAME")
-        .unwrap_or_else(|_| "default-service".to_string());
+    let service_name =
+        env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "default-service".to_string());
 
     assert_eq!(service_name, custom_name);
 

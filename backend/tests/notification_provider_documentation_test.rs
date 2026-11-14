@@ -10,29 +10,15 @@ mod notification_provider_documentation {
     use std::fs;
 
     /// Notification provider types that should be documented
-    const NOTIFICATION_PROVIDERS: &[&str] = &[
-        "email",
-        "Email",
-        "SMS",
-        "sms",
-        "push",
-        "Push",
-    ];
+    const NOTIFICATION_PROVIDERS: &[&str] = &["email", "Email", "SMS", "sms", "push", "Push"];
 
     /// Example configuration markers that should appear in docs
-    const CONFIG_EXAMPLES: &[&str] = &[
-        "example",
-        "Example",
-        "config",
-        "Config",
-    ];
+    const CONFIG_EXAMPLES: &[&str] = &["example", "Example", "config", "Config"];
 
     #[test]
     fn notification_documentation_exists() {
-        let notification_docs_paths = vec![
-            "docs/push-notifications.md",
-            "docs/deployment-guide.md",
-        ];
+        let notification_docs_paths =
+            vec!["docs/push-notifications.md", "docs/deployment-guide.md"];
 
         let at_least_one_exists = notification_docs_paths
             .iter()
@@ -49,9 +35,9 @@ mod notification_provider_documentation {
         let push_doc = fs::read_to_string("docs/push-notifications.md")
             .expect("docs/push-notifications.md should be readable");
 
-        let has_provider_types = NOTIFICATION_PROVIDERS.iter().any(|provider| {
-            push_doc.contains(provider)
-        });
+        let has_provider_types = NOTIFICATION_PROVIDERS
+            .iter()
+            .any(|provider| push_doc.contains(provider));
 
         assert!(
             has_provider_types,
@@ -64,9 +50,9 @@ mod notification_provider_documentation {
         let push_doc = fs::read_to_string("docs/push-notifications.md")
             .expect("docs/push-notifications.md should be readable");
 
-        let has_config_guidance = CONFIG_EXAMPLES.iter().any(|keyword| {
-            push_doc.contains(keyword)
-        });
+        let has_config_guidance = CONFIG_EXAMPLES
+            .iter()
+            .any(|keyword| push_doc.contains(keyword));
 
         assert!(
             has_config_guidance,

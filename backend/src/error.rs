@@ -148,22 +148,23 @@ mod tests {
     fn corrupted_db_file_surfaces_as_db_error() {
         // A file that is not a valid SQLite database makes `open` fail; the DB
         // layer must surface this as `AppError::Db` rather than panicking.
-        let dir = std::env::temp_dir().join(format!(
-            "handsoff_corrupt_db_{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("handsoff_corrupt_db_{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("create temp dir");
         let path = dir.join("corrupted.db");
         std::fs::write(&path, b"this is not a valid sqlite database").expect("write corrupt db");
 
-        let result = rusqlite::Connection::open(&path)
-            .and_then(|conn| conn.query_row("SELECT count(*) FROM sqlite_master", [], |row| {
+        let result = rusqlite::Connection::open(&path).and_then(|conn| {
+            conn.query_row("SELECT count(*) FROM sqlite_master", [], |row| {
                 row.get::<_, i64>(0)
-            }));
+            })
+        });
 
         let err = AppError::from(result.expect_err("corrupted db should error"));
         assert!(matches!(err, AppError::Db(_)));
-        assert_eq!(err.into_response().status(), StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            err.into_response().status(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
 
         let _ = std::fs::remove_dir_all(&dir);
     }

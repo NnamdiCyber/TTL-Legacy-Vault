@@ -144,10 +144,7 @@ pub fn calculate_protocol_fee(amount: i128) -> i128 {
 /// # Arguments
 /// * `available` - Sponsor account XLM balance in stroops
 /// * `required` - Fee amount (in stroops) that must be covered
-pub fn check_sponsor_balance(
-    available: i128,
-    required: i128,
-) -> Result<(), FeeSponsorsException> {
+pub fn check_sponsor_balance(available: i128, required: i128) -> Result<(), FeeSponsorsException> {
     if available < required {
         return Err(FeeSponsorsException::SponsorInsufficientBalance {
             available,
@@ -168,10 +165,12 @@ pub fn map_stellar_sdk_error(
     required: i128,
 ) -> FeeSponsorsException {
     let lowered = sdk_error.to_lowercase();
-    if lowered.contains("insufficient")
-        && (lowered.contains("balance") || lowered.contains("fund"))
+    if lowered.contains("insufficient") && (lowered.contains("balance") || lowered.contains("fund"))
     {
-        FeeSponsorsException::SponsorInsufficientBalance { available, required }
+        FeeSponsorsException::SponsorInsufficientBalance {
+            available,
+            required,
+        }
     } else {
         FeeSponsorsException::SubmissionFailed(sdk_error.to_string())
     }
@@ -322,12 +321,18 @@ impl fmt::Display for FeeSponsorsException {
         match self {
             Self::InvalidAccount(msg) => write!(f, "invalid account: {}", msg),
             Self::InvalidAmount(msg) => write!(f, "invalid amount: {}", msg),
-            Self::InsufficientSponsorBalance { available, required } => write!(
+            Self::InsufficientSponsorBalance {
+                available,
+                required,
+            } => write!(
                 f,
                 "insufficient sponsor balance: available={}, required={}",
                 available, required
             ),
-            Self::SponsorInsufficientBalance { available, required } => write!(
+            Self::SponsorInsufficientBalance {
+                available,
+                required,
+            } => write!(
                 f,
                 "sponsor insufficient balance: available={}, required={}",
                 available, required
@@ -374,8 +379,7 @@ mod sandbox {
             stellar_base_fee: i128,
             fee_bump_premium: i128,
         ) -> Result<SponsoredRelease, FeeSponsorsException> {
-            let breakdown =
-                FeeBreakdown::new(released_amount, stellar_base_fee, fee_bump_premium);
+            let breakdown = FeeBreakdown::new(released_amount, stellar_base_fee, fee_bump_premium);
 
             if self.sponsor_balance < breakdown.total_sponsor_fee {
                 return Err(FeeSponsorsException::InsufficientSponsorBalance {
@@ -455,7 +459,10 @@ mod tests {
             .expect_err("claim should fail when sponsor is underfunded");
 
         match err {
-            FeeSponsorsException::InsufficientSponsorBalance { available, required } => {
+            FeeSponsorsException::InsufficientSponsorBalance {
+                available,
+                required,
+            } => {
                 assert_eq!(available, 50);
                 assert_eq!(required, 300);
             }
@@ -473,7 +480,10 @@ mod tests {
             .expect_err("balance below threshold should be rejected");
 
         match err {
-            FeeSponsorsException::SponsorInsufficientBalance { available, required } => {
+            FeeSponsorsException::SponsorInsufficientBalance {
+                available,
+                required,
+            } => {
                 assert_eq!(available, 50);
                 assert_eq!(required, SPONSOR_FEE_THRESHOLD_STROOPS);
             }
@@ -483,8 +493,11 @@ mod tests {
 
     #[test]
     fn check_sponsor_balance_accepts_at_threshold() {
-        assert!(check_sponsor_balance(SPONSOR_FEE_THRESHOLD_STROOPS, SPONSOR_FEE_THRESHOLD_STROOPS)
-            .is_ok());
+        assert!(check_sponsor_balance(
+            SPONSOR_FEE_THRESHOLD_STROOPS,
+            SPONSOR_FEE_THRESHOLD_STROOPS
+        )
+        .is_ok());
     }
 
     #[test]
@@ -499,7 +512,10 @@ mod tests {
         .expect_err("underfunded sponsor should be rejected");
 
         match err {
-            FeeSponsorsException::SponsorInsufficientBalance { available, required } => {
+            FeeSponsorsException::SponsorInsufficientBalance {
+                available,
+                required,
+            } => {
                 assert_eq!(available, 10);
                 assert_eq!(required, SPONSOR_FEE_THRESHOLD_STROOPS);
             }
@@ -516,7 +532,10 @@ mod tests {
         );
 
         match err {
-            FeeSponsorsException::SponsorInsufficientBalance { available, required } => {
+            FeeSponsorsException::SponsorInsufficientBalance {
+                available,
+                required,
+            } => {
                 assert_eq!(available, 25);
                 assert_eq!(required, 100);
             }

@@ -10,10 +10,7 @@ mod architecture_documentation {
     #[test]
     fn architecture_documentation_file_exists() {
         let path = Path::new("docs/architecture.md");
-        assert!(
-            path.exists(),
-            "docs/architecture.md should exist"
-        );
+        assert!(path.exists(), "docs/architecture.md should exist");
     }
 
     /// Verifies that architecture documentation contains mermaid diagram
@@ -23,7 +20,9 @@ mod architecture_documentation {
             .expect("Failed to read docs/architecture.md");
 
         assert!(
-            content.contains("```mermaid") || content.contains("graph") || content.contains("diagram"),
+            content.contains("```mermaid")
+                || content.contains("graph")
+                || content.contains("diagram"),
             "docs/architecture.md should contain a Mermaid diagram"
         );
     }
@@ -82,9 +81,9 @@ mod architecture_documentation {
         let content = fs::read_to_string("docs/architecture.md")
             .expect("Failed to read docs/architecture.md");
 
-        let has_flow_description = content.to_lowercase().contains("data flow") ||
-            content.to_lowercase().contains("flow") ||
-            content.to_lowercase().contains("interaction");
+        let has_flow_description = content.to_lowercase().contains("data flow")
+            || content.to_lowercase().contains("flow")
+            || content.to_lowercase().contains("interaction");
 
         assert!(
             has_flow_description,
@@ -99,7 +98,8 @@ mod architecture_documentation {
             .expect("Failed to read docs/architecture.md");
 
         assert!(
-            content.to_lowercase().contains("check-in") || content.to_lowercase().contains("checkin"),
+            content.to_lowercase().contains("check-in")
+                || content.to_lowercase().contains("checkin"),
             "docs/architecture.md should include check-in data flow description"
         );
     }

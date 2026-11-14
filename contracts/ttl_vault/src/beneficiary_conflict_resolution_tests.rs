@@ -133,10 +133,7 @@ fn test_file_beneficiary_conflict_dispute_window_uses_default() {
         .file_beneficiary_conflict(&f.vault_id, &reason)
         .unwrap();
 
-    let conflict = f
-        .client
-        .get_beneficiary_conflict(&f.vault_id)
-        .unwrap();
+    let conflict = f.client.get_beneficiary_conflict(&f.vault_id).unwrap();
 
     let expected_end = now + DEFAULT_CONFLICT_DISPUTE_WINDOW;
     let actual_end = conflict.dispute_window_ends_at.unwrap();
@@ -201,9 +198,9 @@ fn test_claim_beneficiary_conflict_empty_reason_fails() {
     let f = setup();
     let claimant = Address::generate(&f.env);
     let empty = String::from_str(&f.env, "");
-    let result =
-        f.client
-            .try_claim_beneficiary_conflict(&f.vault_id, &claimant, &empty);
+    let result = f
+        .client
+        .try_claim_beneficiary_conflict(&f.vault_id, &claimant, &empty);
     assert!(result.is_err(), "Empty reason should fail");
 }
 
@@ -224,9 +221,9 @@ fn test_set_conflict_dispute_window_owner_only() {
 fn test_set_conflict_dispute_window_non_owner_fails() {
     let f = setup();
     let stranger = Address::generate(&f.env);
-    let result =
-        f.client
-            .try_set_conflict_dispute_window(&f.vault_id, &stranger, &7200u64);
+    let result = f
+        .client
+        .try_set_conflict_dispute_window(&f.vault_id, &stranger, &7200u64);
     assert!(result.is_err(), "Non-owner should not set dispute window");
 }
 
@@ -234,18 +231,22 @@ fn test_set_conflict_dispute_window_non_owner_fails() {
 fn test_set_conflict_dispute_window_below_min_fails() {
     let f = setup();
     // 59 minutes — below MIN_CONFLICT_DISPUTE_WINDOW (1 hour)
-    let result = f
-        .client
-        .try_set_conflict_dispute_window(&f.vault_id, &f.owner, &(MIN_CONFLICT_DISPUTE_WINDOW - 1));
+    let result = f.client.try_set_conflict_dispute_window(
+        &f.vault_id,
+        &f.owner,
+        &(MIN_CONFLICT_DISPUTE_WINDOW - 1),
+    );
     assert!(result.is_err(), "Window below minimum should be rejected");
 }
 
 #[test]
 fn test_set_conflict_dispute_window_above_max_fails() {
     let f = setup();
-    let result = f
-        .client
-        .try_set_conflict_dispute_window(&f.vault_id, &f.owner, &(MAX_CONFLICT_DISPUTE_WINDOW + 1));
+    let result = f.client.try_set_conflict_dispute_window(
+        &f.vault_id,
+        &f.owner,
+        &(MAX_CONFLICT_DISPUTE_WINDOW + 1),
+    );
     assert!(result.is_err(), "Window above maximum should be rejected");
 }
 
@@ -301,10 +302,13 @@ fn test_set_priority_beneficiary_non_owner_fails() {
     let f = setup();
     let stranger = Address::generate(&f.env);
     let priority = Address::generate(&f.env);
-    let result =
-        f.client
-            .try_set_conflict_priority(&f.vault_id, &stranger, &priority);
-    assert!(result.is_err(), "Non-owner must not set priority beneficiary");
+    let result = f
+        .client
+        .try_set_conflict_priority(&f.vault_id, &stranger, &priority);
+    assert!(
+        result.is_err(),
+        "Non-owner must not set priority beneficiary"
+    );
 }
 
 #[test]
@@ -314,11 +318,7 @@ fn test_set_priority_beneficiary_after_resolution_fails() {
 
     // File a claim and immediately resolve via admin manual override.
     f.client
-        .claim_beneficiary_conflict(
-            &f.vault_id,
-            &claimant,
-            &String::from_str(&f.env, "Claim"),
-        )
+        .claim_beneficiary_conflict(&f.vault_id, &claimant, &String::from_str(&f.env, "Claim"))
         .unwrap();
 
     f.client
@@ -326,9 +326,9 @@ fn test_set_priority_beneficiary_after_resolution_fails() {
         .unwrap();
 
     let priority = Address::generate(&f.env);
-    let result =
-        f.client
-            .try_set_conflict_priority(&f.vault_id, &f.owner, &priority);
+    let result = f
+        .client
+        .try_set_conflict_priority(&f.vault_id, &f.owner, &priority);
     assert!(
         result.is_err(),
         "Should not set priority after conflict resolved"
@@ -355,7 +355,9 @@ fn test_auto_resolve_first_registered_wins() {
         .unwrap();
 
     // Advance time slightly, then B files.
-    f.env.ledger().set_timestamp(f.env.ledger().timestamp() + 60);
+    f.env
+        .ledger()
+        .set_timestamp(f.env.ledger().timestamp() + 60);
     f.client
         .claim_beneficiary_conflict(
             &f.vault_id,
@@ -369,9 +371,7 @@ fn test_auto_resolve_first_registered_wins() {
         .ledger()
         .set_timestamp(f.env.ledger().timestamp() + DEFAULT_CONFLICT_DISPUTE_WINDOW + 1);
 
-    f.client
-        .auto_resolve_conflict(&f.vault_id)
-        .unwrap();
+    f.client.auto_resolve_conflict(&f.vault_id).unwrap();
 
     let conflict = f.client.get_beneficiary_conflict(&f.vault_id).unwrap();
     match conflict.resolution {
@@ -396,7 +396,9 @@ fn test_auto_resolve_owner_priority_wins() {
             &String::from_str(&f.env, "First claimant"),
         )
         .unwrap();
-    f.env.ledger().set_timestamp(f.env.ledger().timestamp() + 60);
+    f.env
+        .ledger()
+        .set_timestamp(f.env.ledger().timestamp() + 60);
     f.client
         .claim_beneficiary_conflict(
             &f.vault_id,
@@ -415,9 +417,7 @@ fn test_auto_resolve_owner_priority_wins() {
         .ledger()
         .set_timestamp(f.env.ledger().timestamp() + DEFAULT_CONFLICT_DISPUTE_WINDOW + 1);
 
-    f.client
-        .auto_resolve_conflict(&f.vault_id)
-        .unwrap();
+    f.client.auto_resolve_conflict(&f.vault_id).unwrap();
 
     let conflict = f.client.get_beneficiary_conflict(&f.vault_id).unwrap();
     match conflict.resolution {
@@ -456,9 +456,7 @@ fn test_auto_resolve_priority_fallback_to_first_registered() {
         .ledger()
         .set_timestamp(f.env.ledger().timestamp() + DEFAULT_CONFLICT_DISPUTE_WINDOW + 1);
 
-    f.client
-        .auto_resolve_conflict(&f.vault_id)
-        .unwrap();
+    f.client.auto_resolve_conflict(&f.vault_id).unwrap();
 
     let conflict = f.client.get_beneficiary_conflict(&f.vault_id).unwrap();
     match conflict.resolution {
@@ -490,9 +488,7 @@ fn test_auto_resolve_dispute_window_active_fails() {
         .unwrap();
 
     // Do NOT advance time past the window.
-    let result = f
-        .client
-        .try_auto_resolve_conflict(&f.vault_id);
+    let result = f.client.try_auto_resolve_conflict(&f.vault_id);
     assert!(
         result.is_err(),
         "Auto-resolve should be blocked while dispute window is active"
@@ -502,10 +498,11 @@ fn test_auto_resolve_dispute_window_active_fails() {
 #[test]
 fn test_auto_resolve_no_conflict_record_fails() {
     let f = setup();
-    let result = f
-        .client
-        .try_auto_resolve_conflict(&f.vault_id);
-    assert!(result.is_err(), "Should fail when no conflict record exists");
+    let result = f.client.try_auto_resolve_conflict(&f.vault_id);
+    assert!(
+        result.is_err(),
+        "Should fail when no conflict record exists"
+    );
 }
 
 #[test]
@@ -522,9 +519,7 @@ fn test_auto_resolve_no_claims_fails() {
         .ledger()
         .set_timestamp(f.env.ledger().timestamp() + MAX_CONFLICT_DISPUTE_WINDOW + 1);
 
-    let result = f
-        .client
-        .try_auto_resolve_conflict(&f.vault_id);
+    let result = f.client.try_auto_resolve_conflict(&f.vault_id);
     assert!(
         result.is_err(),
         "Auto-resolve with no claims should return an error"
@@ -537,25 +532,17 @@ fn test_auto_resolve_already_resolved_fails() {
     let claimant = Address::generate(&f.env);
 
     f.client
-        .claim_beneficiary_conflict(
-            &f.vault_id,
-            &claimant,
-            &String::from_str(&f.env, "Claim"),
-        )
+        .claim_beneficiary_conflict(&f.vault_id, &claimant, &String::from_str(&f.env, "Claim"))
         .unwrap();
 
     // Advance past window and resolve.
     f.env
         .ledger()
         .set_timestamp(f.env.ledger().timestamp() + DEFAULT_CONFLICT_DISPUTE_WINDOW + 1);
-    f.client
-        .auto_resolve_conflict(&f.vault_id)
-        .unwrap();
+    f.client.auto_resolve_conflict(&f.vault_id).unwrap();
 
     // Second call should fail.
-    let result = f
-        .client
-        .try_auto_resolve_conflict(&f.vault_id);
+    let result = f.client.try_auto_resolve_conflict(&f.vault_id);
     assert!(
         result.is_err(),
         "Auto-resolve should fail when conflict already resolved"
@@ -572,11 +559,7 @@ fn test_resolve_beneficiary_conflict_admin_only() {
     let claimant = Address::generate(&f.env);
 
     f.client
-        .claim_beneficiary_conflict(
-            &f.vault_id,
-            &claimant,
-            &String::from_str(&f.env, "Claim"),
-        )
+        .claim_beneficiary_conflict(&f.vault_id, &claimant, &String::from_str(&f.env, "Claim"))
         .unwrap();
 
     f.client
@@ -598,11 +581,7 @@ fn test_resolve_beneficiary_conflict_non_admin_fails() {
     let stranger = Address::generate(&f.env);
 
     f.client
-        .claim_beneficiary_conflict(
-            &f.vault_id,
-            &claimant,
-            &String::from_str(&f.env, "Claim"),
-        )
+        .claim_beneficiary_conflict(&f.vault_id, &claimant, &String::from_str(&f.env, "Claim"))
         .unwrap();
 
     // Manually set the env signer context to a non-admin — mock_all_auths passes
@@ -635,11 +614,7 @@ fn test_resolve_beneficiary_conflict_already_resolved_fails() {
     let claimant = Address::generate(&f.env);
 
     f.client
-        .claim_beneficiary_conflict(
-            &f.vault_id,
-            &claimant,
-            &String::from_str(&f.env, "Claim"),
-        )
+        .claim_beneficiary_conflict(&f.vault_id, &claimant, &String::from_str(&f.env, "Claim"))
         .unwrap();
 
     // First resolution.
@@ -698,25 +673,19 @@ fn test_file_beneficiary_conflict_rejected_after_auto_resolve() {
 
     // Beneficiary files a claim.
     f.client
-        .file_beneficiary_conflict(
-            &f.vault_id,
-            &String::from_str(&f.env, "Original claim"),
-        )
+        .file_beneficiary_conflict(&f.vault_id, &String::from_str(&f.env, "Original claim"))
         .unwrap();
 
     // Advance past window and auto-resolve.
     f.env
         .ledger()
         .set_timestamp(f.env.ledger().timestamp() + DEFAULT_CONFLICT_DISPUTE_WINDOW + 1);
-    f.client
-        .auto_resolve_conflict(&f.vault_id)
-        .unwrap();
+    f.client.auto_resolve_conflict(&f.vault_id).unwrap();
 
     // Filing again should be rejected.
-    let result = f.client.try_file_beneficiary_conflict(
-        &f.vault_id,
-        &String::from_str(&f.env, "Another claim"),
-    );
+    let result = f
+        .client
+        .try_file_beneficiary_conflict(&f.vault_id, &String::from_str(&f.env, "Another claim"));
     assert!(
         result.is_err(),
         "file_beneficiary_conflict after resolution should fail"
@@ -733,20 +702,13 @@ fn test_resolved_at_is_set_on_auto_resolve() {
     let claimant = Address::generate(&f.env);
 
     f.client
-        .claim_beneficiary_conflict(
-            &f.vault_id,
-            &claimant,
-            &String::from_str(&f.env, "Claim"),
-        )
+        .claim_beneficiary_conflict(&f.vault_id, &claimant, &String::from_str(&f.env, "Claim"))
         .unwrap();
 
-    let resolution_time =
-        f.env.ledger().timestamp() + DEFAULT_CONFLICT_DISPUTE_WINDOW + 100;
+    let resolution_time = f.env.ledger().timestamp() + DEFAULT_CONFLICT_DISPUTE_WINDOW + 100;
     f.env.ledger().set_timestamp(resolution_time);
 
-    f.client
-        .auto_resolve_conflict(&f.vault_id)
-        .unwrap();
+    f.client.auto_resolve_conflict(&f.vault_id).unwrap();
 
     let conflict = f.client.get_beneficiary_conflict(&f.vault_id).unwrap();
     assert_eq!(
@@ -762,11 +724,7 @@ fn test_resolved_at_is_set_on_manual_resolve() {
     let claimant = Address::generate(&f.env);
 
     f.client
-        .claim_beneficiary_conflict(
-            &f.vault_id,
-            &claimant,
-            &String::from_str(&f.env, "Claim"),
-        )
+        .claim_beneficiary_conflict(&f.vault_id, &claimant, &String::from_str(&f.env, "Claim"))
         .unwrap();
 
     let resolution_time = f.env.ledger().timestamp() + 500;

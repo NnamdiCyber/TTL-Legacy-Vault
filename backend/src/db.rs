@@ -954,7 +954,11 @@ impl Db {
                 },
                 timestamp,
                 triggered_by: r.get(5)?,
-                trigger_reason: if trigger_reason.is_empty() { None } else { trigger_reason },
+                trigger_reason: if trigger_reason.is_empty() {
+                    None
+                } else {
+                    trigger_reason
+                },
                 details,
             })
         })?;
@@ -1343,13 +1347,11 @@ impl Db {
 
         let row_res = stmt.query_row(params![vault_id as i64], |r| {
             let tier_str: Option<String> = r.get(1)?;
-            let tier = tier_str.as_ref().map(|t| {
-                match t.as_str() {
-                    "T1" => crate::models::EscalationTier::T1,
-                    "T2" => crate::models::EscalationTier::T2,
-                    "T3" => crate::models::EscalationTier::T3,
-                    _ => crate::models::EscalationTier::T1,
-                }
+            let tier = tier_str.as_ref().map(|t| match t.as_str() {
+                "T1" => crate::models::EscalationTier::T1,
+                "T2" => crate::models::EscalationTier::T2,
+                "T3" => crate::models::EscalationTier::T3,
+                _ => crate::models::EscalationTier::T1,
             });
 
             let escalated_at_str: Option<String> = r.get(2)?;
@@ -1377,9 +1379,7 @@ impl Db {
         &self,
         state: &crate::models::EscalationState,
     ) -> Result<(), rusqlite::Error> {
-        let tier_str = state
-            .last_escalation_tier
-            .map(|t| format!("{:?}", t));
+        let tier_str = state.last_escalation_tier.map(|t| format!("{:?}", t));
         let escalated_at_str = state.escalated_at.map(|dt| dt.to_rfc3339());
 
         self.conn.lock().unwrap().execute(
@@ -1399,7 +1399,8 @@ impl Db {
         &self,
         event: &crate::models::EscalationEvent,
     ) -> Result<(), rusqlite::Error> {
-        let channels_json = serde_json::to_string(&event.channels).unwrap_or_else(|_| "[]".to_string());
+        let channels_json =
+            serde_json::to_string(&event.channels).unwrap_or_else(|_| "[]".to_string());
         let tier_str = format!("{:?}", event.tier);
 
         self.conn.lock().unwrap().execute(
@@ -1442,7 +1443,8 @@ impl Db {
             };
 
             let channels_json_str: String = r.get(4)?;
-            let channels: Vec<String> = serde_json::from_str(&channels_json_str).unwrap_or_default();
+            let channels: Vec<String> =
+                serde_json::from_str(&channels_json_str).unwrap_or_default();
 
             let dispatched_at_str: String = r.get(3)?;
             let dispatched_at = chrono::DateTime::parse_from_rfc3339(&dispatched_at_str)

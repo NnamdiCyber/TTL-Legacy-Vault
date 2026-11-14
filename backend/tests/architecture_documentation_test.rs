@@ -42,8 +42,7 @@ mod architecture_documentation {
             || architecture.contains("check-in")
             || architecture.contains("check in");
 
-        let has_release_flow = architecture.contains("Release")
-            || architecture.contains("release");
+        let has_release_flow = architecture.contains("Release") || architecture.contains("release");
 
         assert!(
             has_check_in_flow,
@@ -61,10 +60,13 @@ mod architecture_documentation {
             .expect("docs/architecture.md should be readable");
 
         // These are key components mentioned in issue #1589
-        let has_scheduler = architecture.contains("scheduler") || architecture.contains("Scheduler");
-        let has_notifications = architecture.contains("notification") || architecture.contains("Notification");
+        let has_scheduler =
+            architecture.contains("scheduler") || architecture.contains("Scheduler");
+        let has_notifications =
+            architecture.contains("notification") || architecture.contains("Notification");
         let has_cache = architecture.contains("cache") || architecture.contains("Cache");
-        let has_websocket = architecture.contains("websocket") || architecture.contains("WebSocket");
+        let has_websocket =
+            architecture.contains("websocket") || architecture.contains("WebSocket");
 
         // At least 2 of these 4 should be documented
         let documented_count = [has_scheduler, has_notifications, has_cache, has_websocket]

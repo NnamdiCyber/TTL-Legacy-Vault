@@ -52,10 +52,7 @@ impl CorsConfig {
     ///
     /// Returns an error when a wildcard origin is combined with credentials,
     /// since that combination is both insecure and rejected by browsers.
-    pub fn from_env_value(
-        raw: Option<&str>,
-        allow_credentials: bool,
-    ) -> Result<Self, AppError> {
+    pub fn from_env_value(raw: Option<&str>, allow_credentials: bool) -> Result<Self, AppError> {
         let mut allowed_origins = Vec::new();
         let mut allow_any_origin = false;
 
@@ -126,9 +123,7 @@ pub struct ReadinessChecks {
 /// Readiness probe: verifies that dependencies (DB connection and Soroban RPC)
 /// are reachable before the instance is considered ready to serve traffic.
 #[instrument(skip(state))]
-pub async fn ready(
-    state: Data<Arc<AppState>>,
-) -> Result<Json<ReadinessResponse>, AppError> {
+pub async fn ready(state: Data<Arc<AppState>>) -> Result<Json<ReadinessResponse>, AppError> {
     let db_ok = state.db.ping().is_ok();
     let rpc_ok = state.rpc.ping().await.is_ok();
 
@@ -274,8 +269,9 @@ pub async fn unsubscribe(
 ) -> Result<HttpResponse, AppError> {
     let db = &state.db;
     match db.process_unsubscribe(&query.token) {
-        Ok(owner) => Ok(HttpResponse::Ok()
-            .body(format!("You ({owner}) have been unsubscribed from reminder emails."))),
+        Ok(owner) => Ok(HttpResponse::Ok().body(format!(
+            "You ({owner}) have been unsubscribed from reminder emails."
+        ))),
         Err(_) => Err(AppError::InvalidInput(
             "Invalid or expired unsubscribe token".into(),
         )),
@@ -383,7 +379,6 @@ pub struct AuditExportQuery {
 /// Exports the vault's audit trail. Only the vault owner may export. The
 
 /* … truncated 3428 chars — edit only what you need near the top … */
-
 // ── Issue #1852: Beneficiary proof-of-life endpoint ────────────────────────
 
 #[derive(serde::Deserialize)]

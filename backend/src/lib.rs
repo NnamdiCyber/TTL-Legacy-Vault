@@ -22,7 +22,6 @@ pub mod routes;
 pub mod sanitization;
 pub mod scheduler;
 pub mod security_headers;
-pub mod sms;
 pub mod templates;
 /// Issue #1596: owner warning when storage TTL nears archival
 pub mod ttl_watch;
@@ -37,6 +36,5 @@ pub use handlers::*;
 pub use models::*;
 pub use notifications::*;
 pub use providers::*;
-pub use sms::*;
 pub use templates::*;
 pub use websocket::*;

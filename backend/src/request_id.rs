@@ -72,10 +72,10 @@ pub async fn request_id_middleware(mut req: Request<Body>, next: Next) -> Respon
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::{Request, StatusCode};
     use axum::body::Body;
-    use tower::ServiceBuilder;
+    use axum::http::{Request, StatusCode};
     use tower::service_fn;
+    use tower::ServiceBuilder;
 
     async fn make_test_request(headers: &[(&str, &str)]) -> Response<Body> {
         let mut req = Request::builder().method("GET").uri("/test");
@@ -85,7 +85,9 @@ mod tests {
         let req = req.body(Body::empty()).unwrap();
 
         let next = service_fn(|_req: Request<Body>| async {
-            Ok::<_, std::convert::Infallible>(Response::builder().status(200).body(Body::empty()).unwrap())
+            Ok::<_, std::convert::Infallible>(
+                Response::builder().status(200).body(Body::empty()).unwrap(),
+            )
         });
 
         request_id_middleware(req, next).await

@@ -24,7 +24,9 @@ mod deploy_mainnet_dry_run {
             .expect("Failed to read deploy_mainnet.sh");
 
         assert!(
-            content.contains("--dry-run") || content.contains("dry_run") || content.contains("DRY_RUN"),
+            content.contains("--dry-run")
+                || content.contains("dry_run")
+                || content.contains("DRY_RUN"),
             "deploy_mainnet.sh should support --dry-run flag"
         );
     }
@@ -35,8 +37,10 @@ mod deploy_mainnet_dry_run {
         let content = fs::read_to_string("scripts/deploy_mainnet.sh")
             .expect("Failed to read deploy_mainnet.sh");
 
-        let has_dry_run_output = content.contains("would") || content.contains("planned")
-            || content.contains("DRY RUN") || content.contains("dry run");
+        let has_dry_run_output = content.contains("would")
+            || content.contains("planned")
+            || content.contains("DRY RUN")
+            || content.contains("dry run");
 
         assert!(
             has_dry_run_output,

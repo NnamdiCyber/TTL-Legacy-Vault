@@ -981,8 +981,11 @@ impl NotificationService {
                 if tokens.is_empty() {
                     return false;
                 }
-                let (title, body, data) =
-                    notification_content(&notif.notification_type, &notif.vault_id, notif.ttl_hours);
+                let (title, body, data) = notification_content(
+                    &notif.notification_type,
+                    &notif.vault_id,
+                    notif.ttl_hours,
+                );
                 for device in &tokens {
                     if self
                         .fcm

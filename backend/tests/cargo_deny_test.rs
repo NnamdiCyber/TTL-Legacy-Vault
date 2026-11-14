@@ -19,8 +19,7 @@ mod cargo_deny {
     /// Verifies that deny.toml has advisories section enabled
     #[test]
     fn deny_toml_has_advisories_section() {
-        let content = fs::read_to_string("deny.toml")
-            .expect("Failed to read deny.toml");
+        let content = fs::read_to_string("deny.toml").expect("Failed to read deny.toml");
 
         assert!(
             content.contains("[advisories]"),
@@ -31,8 +30,7 @@ mod cargo_deny {
     /// Verifies that deny.toml has licenses section configured
     #[test]
     fn deny_toml_has_licenses_section() {
-        let content = fs::read_to_string("deny.toml")
-            .expect("Failed to read deny.toml");
+        let content = fs::read_to_string("deny.toml").expect("Failed to read deny.toml");
 
         assert!(
             content.contains("[licenses]"),
@@ -43,8 +41,7 @@ mod cargo_deny {
     /// Verifies that deny.toml has bans section configured
     #[test]
     fn deny_toml_has_bans_section() {
-        let content = fs::read_to_string("deny.toml")
-            .expect("Failed to read deny.toml");
+        let content = fs::read_to_string("deny.toml").expect("Failed to read deny.toml");
 
         assert!(
             content.contains("[bans]"),
@@ -56,8 +53,7 @@ mod cargo_deny {
     #[test]
     fn ci_workflow_has_cargo_deny_check() {
         let ci_path = ".github/workflows/ci.yml";
-        let content = fs::read_to_string(ci_path)
-            .expect("Failed to read CI workflow file");
+        let content = fs::read_to_string(ci_path).expect("Failed to read CI workflow file");
 
         assert!(
             content.contains("cargo-deny") || content.contains("cargo deny"),
@@ -68,10 +64,10 @@ mod cargo_deny {
     /// Verifies that advisories denial list is configured
     #[test]
     fn deny_toml_has_advisories_configured() {
-        let content = fs::read_to_string("deny.toml")
-            .expect("Failed to read deny.toml");
+        let content = fs::read_to_string("deny.toml").expect("Failed to read deny.toml");
 
-        let advisories_section = content.split("[advisories]")
+        let advisories_section = content
+            .split("[advisories]")
             .nth(1)
             .expect("Could not find [advisories] section");
 
@@ -84,10 +80,10 @@ mod cargo_deny {
     /// Verifies that allowed licenses list is configured
     #[test]
     fn deny_toml_has_allowed_licenses() {
-        let content = fs::read_to_string("deny.toml")
-            .expect("Failed to read deny.toml");
+        let content = fs::read_to_string("deny.toml").expect("Failed to read deny.toml");
 
-        let licenses_section = content.split("[licenses]")
+        let licenses_section = content
+            .split("[licenses]")
             .nth(1)
             .expect("Could not find [licenses] section");
 

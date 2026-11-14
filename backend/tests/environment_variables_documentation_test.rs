@@ -56,8 +56,8 @@ mod environment_variables_documentation {
 
     #[test]
     fn env_example_contains_all_variables() {
-        let env_example = fs::read_to_string(".env.example")
-            .expect(".env.example file should be readable");
+        let env_example =
+            fs::read_to_string(".env.example").expect(".env.example file should be readable");
 
         for var in REQUIRED_ENV_VARS {
             assert!(

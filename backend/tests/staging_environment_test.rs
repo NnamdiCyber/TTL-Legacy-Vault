@@ -18,8 +18,8 @@ mod staging_environment {
     /// Verifies that environments.toml contains staging configuration
     #[test]
     fn environments_config_has_staging() {
-        let content = fs::read_to_string("environments.toml")
-            .expect("Failed to read environments.toml");
+        let content =
+            fs::read_to_string("environments.toml").expect("Failed to read environments.toml");
 
         assert!(
             content.contains("[staging]") || content.contains("staging"),
@@ -39,8 +39,8 @@ mod staging_environment {
     /// Verifies that docker-compose defines services
     #[test]
     fn docker_compose_defines_services() {
-        let content = fs::read_to_string("docker-compose.yml")
-            .expect("Failed to read docker-compose.yml");
+        let content =
+            fs::read_to_string("docker-compose.yml").expect("Failed to read docker-compose.yml");
 
         assert!(
             content.contains("services:"),
@@ -70,8 +70,7 @@ mod staging_environment {
     #[test]
     fn deployment_workflows_exist() {
         let workflows_dir = ".github/workflows";
-        let entries = fs::read_dir(workflows_dir)
-            .expect("Failed to read workflows directory");
+        let entries = fs::read_dir(workflows_dir).expect("Failed to read workflows directory");
 
         let deployment_files: Vec<_> = entries
             .filter_map(|entry| {
@@ -105,8 +104,7 @@ mod staging_environment {
     /// Verifies that .env.example documents staging-specific variables
     #[test]
     fn env_example_has_environment_variables() {
-        let content = fs::read_to_string(".env.example")
-            .expect("Failed to read .env.example");
+        let content = fs::read_to_string(".env.example").expect("Failed to read .env.example");
 
         assert!(
             !content.is_empty(),
@@ -117,11 +115,7 @@ mod staging_environment {
     /// Verifies that deployment-related configuration exists
     #[test]
     fn deployment_configuration_exists() {
-        let config_files = vec![
-            "Dockerfile",
-            "docker-compose.yml",
-            "environments.toml",
-        ];
+        let config_files = vec!["Dockerfile", "docker-compose.yml", "environments.toml"];
 
         for file in config_files {
             assert!(
@@ -135,11 +129,12 @@ mod staging_environment {
     /// Verifies that staging differs from production configuration
     #[test]
     fn staging_production_separation() {
-        let content = fs::read_to_string("environments.toml")
-            .expect("Failed to read environments.toml");
+        let content =
+            fs::read_to_string("environments.toml").expect("Failed to read environments.toml");
 
         // Should have multiple environment sections
-        let sections: Vec<&str> = content.lines()
+        let sections: Vec<&str> = content
+            .lines()
             .filter(|line| line.trim().starts_with("["))
             .collect();
 

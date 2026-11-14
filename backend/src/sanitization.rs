@@ -341,10 +341,7 @@ mod tests {
     /// script tag past the maximum is still rejected (400).
     #[tokio::test]
     async fn test_oversized_xss_payload_rejected() {
-        let payload = format!(
-            "<script>{}</script>",
-            "a".repeat(MAX_STRING_FIELD_LEN)
-        );
+        let payload = format!("<script>{}</script>", "a".repeat(MAX_STRING_FIELD_LEN));
         let body = json!({ "message": payload });
         let res = post_json(test_app(), body.to_string()).await;
         assert_eq!(res.status(), StatusCode::BAD_REQUEST);

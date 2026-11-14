@@ -1,12 +1,12 @@
-/// Tests for vault ownership transfer with two-step acceptance flow (Issue #1340)
-///
-/// Covers:
-///   - `initiate_ownership_transfer`: current owner proposes a new owner
-///   - `accept_ownership_transfer`: new owner accepts after the 24-hour time-lock
-///   - Timeout / expiry: pending transfer expires after 7 days
-///   - Rejection / cancellation: owner or proposed new owner can cancel
-///
-/// These tests exercise the complete flow described in docs/ownership-transfer.md.
+//! Tests for vault ownership transfer with two-step acceptance flow (Issue #1340)
+//!
+//! Covers:
+//!   - `initiate_ownership_transfer`: current owner proposes a new owner
+//!   - `accept_ownership_transfer`: new owner accepts after the 24-hour time-lock
+//!   - Timeout / expiry: pending transfer expires after 7 days
+//!   - Rejection / cancellation: owner or proposed new owner can cancel
+//!
+//! These tests exercise the complete flow described in docs/ownership-transfer.md.
 #![cfg(test)]
 
 use super::*;
@@ -48,8 +48,14 @@ fn test_1340_initiate_transfer_stores_pending_request() {
         .get_pending_ownership_transfer(&vault_id)
         .expect("pending request must exist after initiation");
 
-    assert_eq!(req.new_owner, new_owner, "pending request should target new_owner");
-    assert_eq!(req.unlocks_at, unlocks_at, "unlocks_at must match returned value");
+    assert_eq!(
+        req.new_owner, new_owner,
+        "pending request should target new_owner"
+    );
+    assert_eq!(
+        req.unlocks_at, unlocks_at,
+        "unlocks_at must match returned value"
+    );
     // Ownership not transferred yet
     assert_eq!(
         client.get_vault(&vault_id).owner,

@@ -34,8 +34,8 @@ mod roadmap_documentation {
 
     #[test]
     fn roadmap_has_version_milestones() {
-        let roadmap = fs::read_to_string("docs/roadmap.md")
-            .expect("docs/roadmap.md should be readable");
+        let roadmap =
+            fs::read_to_string("docs/roadmap.md").expect("docs/roadmap.md should be readable");
 
         for milestone in VERSION_MILESTONES {
             assert!(
@@ -48,8 +48,8 @@ mod roadmap_documentation {
 
     #[test]
     fn roadmap_marks_delivered_features() {
-        let roadmap = fs::read_to_string("docs/roadmap.md")
-            .expect("docs/roadmap.md should be readable");
+        let roadmap =
+            fs::read_to_string("docs/roadmap.md").expect("docs/roadmap.md should be readable");
 
         let has_checkmark = roadmap.contains("✅");
 
@@ -61,12 +61,11 @@ mod roadmap_documentation {
 
     #[test]
     fn roadmap_current_version_is_marked() {
-        let roadmap = fs::read_to_string("docs/roadmap.md")
-            .expect("docs/roadmap.md should be readable");
+        let roadmap =
+            fs::read_to_string("docs/roadmap.md").expect("docs/roadmap.md should be readable");
 
-        let has_current_marker = roadmap.contains("Current")
-            || roadmap.contains("current")
-            || roadmap.contains("v1.0");
+        let has_current_marker =
+            roadmap.contains("Current") || roadmap.contains("current") || roadmap.contains("v1.0");
 
         assert!(
             has_current_marker,
@@ -76,8 +75,8 @@ mod roadmap_documentation {
 
     #[test]
     fn roadmap_has_clear_structure() {
-        let roadmap = fs::read_to_string("docs/roadmap.md")
-            .expect("docs/roadmap.md should be readable");
+        let roadmap =
+            fs::read_to_string("docs/roadmap.md").expect("docs/roadmap.md should be readable");
 
         // Check for markdown headers indicating structure
         let has_version_headers = roadmap.contains("## v");
@@ -95,12 +94,11 @@ mod roadmap_documentation {
 
     #[test]
     fn roadmap_distinguishes_future_work() {
-        let roadmap = fs::read_to_string("docs/roadmap.md")
-            .expect("docs/roadmap.md should be readable");
+        let roadmap =
+            fs::read_to_string("docs/roadmap.md").expect("docs/roadmap.md should be readable");
 
-        let has_future_marker = roadmap.contains("Future")
-            || roadmap.contains("Upcoming")
-            || roadmap.contains("v4.0");
+        let has_future_marker =
+            roadmap.contains("Future") || roadmap.contains("Upcoming") || roadmap.contains("v4.0");
 
         assert!(
             has_future_marker,

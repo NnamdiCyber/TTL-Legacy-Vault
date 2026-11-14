@@ -187,14 +187,22 @@ pub fn notify_withdrawal_escrow_verified(
     let mut queued = 0;
     for sub in subscriptions.iter().filter(|s| {
         s.event_types.is_empty()
-            || s.event_types.iter().any(|t| t == WITHDRAWAL_ESCROW_VERIFIED_EVENT)
+            || s.event_types
+                .iter()
+                .any(|t| t == WITHDRAWAL_ESCROW_VERIFIED_EVENT)
     }) {
         let payload = serde_json::json!({
             "event": WITHDRAWAL_ESCROW_VERIFIED_EVENT,
             "vault_id": vault_id,
             "amount": amount.to_string(),
         });
-        enqueue(db, vault_id, WITHDRAWAL_ESCROW_VERIFIED_EVENT, payload, &sub.endpoint_url)?;
+        enqueue(
+            db,
+            vault_id,
+            WITHDRAWAL_ESCROW_VERIFIED_EVENT,
+            payload,
+            &sub.endpoint_url,
+        )?;
         queued += 1;
     }
     Ok(queued)
@@ -478,7 +486,10 @@ mod tests {
     #[test]
     fn failure_email_rate_limit_allows_first_then_blocks() {
         let owner = format!("owner-{}", Uuid::new_v4());
-        assert!(failure_email_allowed(&owner), "first email should be allowed");
+        assert!(
+            failure_email_allowed(&owner),
+            "first email should be allowed"
+        );
         assert!(
             !failure_email_allowed(&owner),
             "second email within the window should be rate-limited"

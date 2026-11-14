@@ -52,20 +52,50 @@ mod openapi_contract {
         ("POST", "/api/vaults/{vault_id}/vesting/claim-bonus"),
         ("GET", "/api/vaults/{vault_id}/vesting/bonus"),
         // Beneficiary endpoints
-        ("POST", "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/accept"),
-        ("POST", "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/decline"),
-        ("GET", "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/conflict"),
-        ("POST", "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/auction"),
-        ("GET", "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/waterfall"),
+        (
+            "POST",
+            "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/accept",
+        ),
+        (
+            "POST",
+            "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/decline",
+        ),
+        (
+            "GET",
+            "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/conflict",
+        ),
+        (
+            "POST",
+            "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/auction",
+        ),
+        (
+            "GET",
+            "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/waterfall",
+        ),
     ];
 
     /// Beneficiary route templates that must be covered by contract tests.
     const BENEFICIARY_ROUTES: &[(&str, &str)] = &[
-        ("POST", "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/accept"),
-        ("POST", "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/decline"),
-        ("GET", "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/conflict"),
-        ("POST", "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/auction"),
-        ("GET", "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/waterfall"),
+        (
+            "POST",
+            "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/accept",
+        ),
+        (
+            "POST",
+            "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/decline",
+        ),
+        (
+            "GET",
+            "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/conflict",
+        ),
+        (
+            "POST",
+            "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/auction",
+        ),
+        (
+            "GET",
+            "/api/vaults/{vault_id}/beneficiaries/{beneficiary_id}/waterfall",
+        ),
     ];
 
     /// Checks that a route returns something other than 404.
@@ -112,8 +142,8 @@ mod openapi_contract {
 
     #[test]
     fn validate_routes_match_openapi_spec() {
-        let openapi_content = std::fs::read_to_string("docs/openapi.yaml")
-            .expect("Failed to read docs/openapi.yaml");
+        let openapi_content =
+            std::fs::read_to_string("docs/openapi.yaml").expect("Failed to read docs/openapi.yaml");
 
         let params = path_param_defaults();
         let excluded = excluded_paths();
@@ -136,8 +166,8 @@ mod openapi_contract {
 
     #[test]
     fn all_routes_have_response_schemas() {
-        let openapi_content = std::fs::read_to_string("docs/openapi.yaml")
-            .expect("Failed to read docs/openapi.yaml");
+        let openapi_content =
+            std::fs::read_to_string("docs/openapi.yaml").expect("Failed to read docs/openapi.yaml");
 
         assert!(
             openapi_content.contains("responses:"),
@@ -167,8 +197,8 @@ mod openapi_contract {
 
     #[test]
     fn beneficiary_routes_defined_in_spec_and_resolvable() {
-        let openapi_content = std::fs::read_to_string("docs/openapi.yaml")
-            .expect("Failed to read docs/openapi.yaml");
+        let openapi_content =
+            std::fs::read_to_string("docs/openapi.yaml").expect("Failed to read docs/openapi.yaml");
 
         let params = path_param_defaults();
 

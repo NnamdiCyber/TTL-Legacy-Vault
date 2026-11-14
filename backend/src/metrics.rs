@@ -38,9 +38,7 @@ pub fn parse_checkin_latency_buckets(raw: &str) -> Option<Vec<u64>> {
 pub fn checkin_latency_buckets_from_env() -> Vec<u64> {
     match std::env::var(CHECKIN_LATENCY_BUCKETS_ENV) {
         Ok(raw) => parse_checkin_latency_buckets(&raw).unwrap_or_else(|| {
-            eprintln!(
-                "warning: invalid {CHECKIN_LATENCY_BUCKETS_ENV}={raw:?}, using defaults"
-            );
+            eprintln!("warning: invalid {CHECKIN_LATENCY_BUCKETS_ENV}={raw:?}, using defaults");
             DEFAULT_CHECKIN_LATENCY_BUCKETS_MS.to_vec()
         }),
         Err(_) => DEFAULT_CHECKIN_LATENCY_BUCKETS_MS.to_vec(),
@@ -284,7 +282,8 @@ impl Metrics {
             &mut out,
             "ttl_legacy_notification_delivery_failures_total",
             "Total failed notification deliveries across all channels",
-            self.notification_delivery_failures_total.load(Ordering::Relaxed),
+            self.notification_delivery_failures_total
+                .load(Ordering::Relaxed),
         );
         push_counter(
             &mut out,
@@ -302,13 +301,15 @@ impl Metrics {
             &mut out,
             "ttl_legacy_notification_email_success_total",
             "Total successful email notification deliveries",
-            self.notification_email_success_total.load(Ordering::Relaxed),
+            self.notification_email_success_total
+                .load(Ordering::Relaxed),
         );
         push_counter(
             &mut out,
             "ttl_legacy_notification_email_failure_total",
             "Total failed email notification deliveries",
-            self.notification_email_failure_total.load(Ordering::Relaxed),
+            self.notification_email_failure_total
+                .load(Ordering::Relaxed),
         );
         push_counter(
             &mut out,
@@ -335,29 +336,36 @@ impl Metrics {
             &mut out,
             "ttl_legacy_notification_delivery_latency_ms",
             "Notification delivery latency in milliseconds across all channels",
-            self.notification_delivery_latency_ms_sum.load(Ordering::Relaxed),
-            self.notification_delivery_latency_ms_count.load(Ordering::Relaxed),
+            self.notification_delivery_latency_ms_sum
+                .load(Ordering::Relaxed),
+            self.notification_delivery_latency_ms_count
+                .load(Ordering::Relaxed),
         );
         push_histogram(
             &mut out,
             "ttl_legacy_notification_push_delivery_latency_ms",
             "Push notification delivery latency in milliseconds",
-            self.notification_push_latency_ms_sum.load(Ordering::Relaxed),
-            self.notification_push_latency_ms_count.load(Ordering::Relaxed),
+            self.notification_push_latency_ms_sum
+                .load(Ordering::Relaxed),
+            self.notification_push_latency_ms_count
+                .load(Ordering::Relaxed),
         );
         push_histogram(
             &mut out,
             "ttl_legacy_notification_email_delivery_latency_ms",
             "Email notification delivery latency in milliseconds",
-            self.notification_email_latency_ms_sum.load(Ordering::Relaxed),
-            self.notification_email_latency_ms_count.load(Ordering::Relaxed),
+            self.notification_email_latency_ms_sum
+                .load(Ordering::Relaxed),
+            self.notification_email_latency_ms_count
+                .load(Ordering::Relaxed),
         );
         push_histogram(
             &mut out,
             "ttl_legacy_notification_sms_delivery_latency_ms",
             "SMS notification delivery latency in milliseconds",
             self.notification_sms_latency_ms_sum.load(Ordering::Relaxed),
-            self.notification_sms_latency_ms_count.load(Ordering::Relaxed),
+            self.notification_sms_latency_ms_count
+                .load(Ordering::Relaxed),
         );
 
         out

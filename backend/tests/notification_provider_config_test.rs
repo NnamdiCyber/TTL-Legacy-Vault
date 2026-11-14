@@ -58,9 +58,9 @@ mod notification_provider_documentation {
         let content = get_notification_docs();
 
         assert!(
-            content.to_lowercase().contains("env") ||
-            content.contains("$") ||
-            content.contains("PROVIDER"),
+            content.to_lowercase().contains("env")
+                || content.contains("$")
+                || content.contains("PROVIDER"),
             "Should include environment variable examples"
         );
     }
@@ -70,14 +70,11 @@ mod notification_provider_documentation {
     fn includes_example_configurations() {
         let content = get_notification_docs();
 
-        let has_examples = content.contains("```") ||
-            content.to_lowercase().contains("example") ||
-            content.to_lowercase().contains("sample");
+        let has_examples = content.contains("```")
+            || content.to_lowercase().contains("example")
+            || content.to_lowercase().contains("sample");
 
-        assert!(
-            has_examples,
-            "Should include example configurations"
-        );
+        assert!(has_examples, "Should include example configurations");
     }
 
     /// Verifies that documentation describes how to enable providers
@@ -85,9 +82,9 @@ mod notification_provider_documentation {
     fn describes_enabling_providers() {
         let content = get_notification_docs();
 
-        let has_enable_guide = content.to_lowercase().contains("enable") ||
-            content.to_lowercase().contains("configure") ||
-            content.to_lowercase().contains("setup");
+        let has_enable_guide = content.to_lowercase().contains("enable")
+            || content.to_lowercase().contains("configure")
+            || content.to_lowercase().contains("setup");
 
         assert!(
             has_enable_guide,
@@ -111,10 +108,7 @@ mod notification_provider_documentation {
     fn has_proper_markdown_structure() {
         let content = get_notification_docs();
 
-        assert!(
-            content.contains("#"),
-            "Should have markdown headings"
-        );
+        assert!(content.contains("#"), "Should have markdown headings");
     }
 
     /// Verifies that documentation lists required fields per provider
@@ -122,11 +116,11 @@ mod notification_provider_documentation {
     fn lists_required_configuration_fields() {
         let content = get_notification_docs();
 
-        let has_field_list = content.to_lowercase().contains("required") ||
-            content.to_lowercase().contains("field") ||
-            content.to_lowercase().contains("parameter") ||
-            content.contains("-") ||
-            content.contains("*");
+        let has_field_list = content.to_lowercase().contains("required")
+            || content.to_lowercase().contains("field")
+            || content.to_lowercase().contains("parameter")
+            || content.contains("-")
+            || content.contains("*");
 
         assert!(
             has_field_list,
@@ -139,9 +133,9 @@ mod notification_provider_documentation {
     fn describes_provider_selection() {
         let content = get_notification_docs();
 
-        let has_selection_guide = content.to_lowercase().contains("select") ||
-            content.to_lowercase().contains("choose") ||
-            content.to_lowercase().contains("default");
+        let has_selection_guide = content.to_lowercase().contains("select")
+            || content.to_lowercase().contains("choose")
+            || content.to_lowercase().contains("default");
 
         assert!(
             has_selection_guide,
@@ -155,11 +149,9 @@ mod notification_provider_documentation {
         let alt_path = Path::new("docs/notifications.md");
 
         if path.exists() {
-            fs::read_to_string(path)
-                .expect("Failed to read docs/notification-providers.md")
+            fs::read_to_string(path).expect("Failed to read docs/notification-providers.md")
         } else if alt_path.exists() {
-            fs::read_to_string(alt_path)
-                .expect("Failed to read docs/notifications.md")
+            fs::read_to_string(alt_path).expect("Failed to read docs/notifications.md")
         } else {
             panic!("Notification provider documentation not found");
         }
