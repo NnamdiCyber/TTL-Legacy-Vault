@@ -70,15 +70,14 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const thresholdKb = 256;
-            const report = (label, path) => {
+            const report = (label, path, thresholdKb) => {
               if (!fs.existsSync(path)) return null;
               const kb = (fs.statSync(path).size / 1024).toFixed(2);
               return `- **${label}**: ${kb} KB (threshold: ${thresholdKb} KB)`;
             };
             const lines = [
-              report('ttl_vault', 'target/wasm32-unknown-unknown/release/ttl_vault.wasm'),
-              report('zk_verifier', 'target/wasm32-unknown-unknown/release/zk_verifier.wasm'),
+              report('ttl_vault', 'target/wasm32-unknown-unknown/release/ttl_vault.wasm', 1024),
+              report('zk_verifier', 'target/wasm32-unknown-unknown/release/zk_verifier.wasm', 256),
             ].filter(Boolean);
             if (lines.length > 0) {
               github.rest.issues.createComment({
