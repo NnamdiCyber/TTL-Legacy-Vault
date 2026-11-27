@@ -203,9 +203,10 @@ impl ZkVerifierContract {
                 all_valid = false;
             }
         }
+        let release_ready = all_valid && !proofs.is_empty();
         env.storage()
             .instance()
-            .set(&DataKey::ReleaseReady, &all_valid);
+            .set(&DataKey::ReleaseReady, &release_ready);
         Ok(all_valid)
     }
 

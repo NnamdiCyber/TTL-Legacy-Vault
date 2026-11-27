@@ -381,3 +381,55 @@ fn test_verify_batch_proofs_empty_batch_succeeds() {
     let proofs: Vec<Bytes> = Vec::new(&env);
     assert!(client.verify_batch_proofs(&proofs));
 }
+
+/// An empty batch must not arm ReleaseReady for query_release().
+#[test]
+fn test_verify_batch_proofs_empty_batch_does_not_arm_release() {
+    let (env, _, client) = setup();
+    let proofs: Vec<Bytes> = Vec::new(&env);
+    assert!(client.verify_batch_proofs(&proofs));
+    assert!(!client.query_release());
+}
+
+/// A batch with an unattested proof must return false and clear any previously armed ReleaseReady.
+#[test]
+fn test_verify_batch_proofs_unattested_proof_returns_false_and_clears_release() {
+    let (env, _, client) = setup();
+    let oracle = Address::generate(&env);
+    client.register_oracle(&oracle);
+
+    let proof_a = bytes!(&env, 0xdeadbeef);
+    let claim = bytes!(&env, 0xcafebabe);
+    client.attest(&oracle, &proof_a, &claim);
+    assert!(client.verify_claim(&proof_a, &claim));
+
+    let unattested_proof_b = bytes!(&env, 0xfeedface);
+    let mut proofs = Vec::new(&env);
+    proofs.push_back(proof_a);
+    proofs.push_back(unattested_proof_b);
+
+    assert!(!client.verify_batch_proofs(&proofs));
+    assert!(!client.query_release());
+}
+
+/// An all-valid non-empty batch arms ReleaseReady once and clears it on read.
+#[test]
+fn test_verify_batch_proofs_all_valid_arms_release_once() {
+    let (env, _, client) = setup();
+    let oracle = Address::generate(&env);
+    client.register_oracle(&oracle);
+
+    let proof_a = bytes!(&env, 0xdeadbeef);
+    let proof_b = bytes!(&env, 0xfeedface);
+    let claim = bytes!(&env, 0xcafebabe);
+    client.attest(&oracle, &proof_a, &claim);
+    client.attest(&oracle, &proof_b, &claim);
+
+    let mut proofs = Vec::new(&env);
+    proofs.push_back(proof_a);
+    proofs.push_back(proof_b);
+
+    assert!(client.verify_batch_proofs(&proofs));
+    assert!(client.query_release());
+    assert!(!client.query_release());
+}
