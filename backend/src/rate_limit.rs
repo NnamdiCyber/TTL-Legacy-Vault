@@ -72,14 +72,24 @@ impl MemoryStore {
     /// Increment `key` and return `Ok(())` when the request is allowed, or
     /// `Err(retry_after_secs)` when the window quota is exhausted.
     pub async fn check(&self, key: &str, max_requests: u32, window_secs: u64) -> Result<(), u64> {
+        const EVICT_THRESHOLD: usize = 1024;
         let mut store = self.entries.lock().await;
         let now = Instant::now();
+        let window = Duration::from_secs(window_secs);
+
+        // Prune expired entries when the map grows past EVICT_THRESHOLD so
+        // rotating client keys cannot cause unbounded memory growth.
+        if store.len() >= EVICT_THRESHOLD {
+            store.retain(|_, (_, started)| now.saturating_duration_since(*started) <= window);
+        }
+
         let entry = store.entry(key.to_string()).or_insert((0, now));
-        if now - entry.1 > Duration::from_secs(window_secs) {
+        if now.saturating_duration_since(entry.1) > window {
             *entry = (1, now);
             Ok(())
         } else if entry.0 >= max_requests {
-            Err(window_secs)
+            let elapsed = now.saturating_duration_since(entry.1).as_secs();
+            Err(window_secs.saturating_sub(elapsed).max(1))
         } else {
             entry.0 += 1;
             Ok(())
@@ -437,6 +447,19 @@ mod tests {
         assert!(store.check("k", 1, 0).await.is_ok());
         // window_secs = 0 means the window is always expired.
         assert!(store.check("k", 1, 0).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn memory_store_evicts_expired_entries_above_threshold() {
+        let store = MemoryStore::new();
+        for i in 0..1025 {
+            assert!(store.check(&format!("key-{i}"), 1, 0).await.is_ok());
+        }
+        // Let the clock advance past the 0s window so expired entries are evicted on next check.
+        tokio::time::sleep(Duration::from_millis(2)).await;
+        assert!(store.check("fresh-key", 1, 0).await.is_ok());
+        let map = store.entries.lock().await;
+        assert!(map.len() < 1025, "expired entries should have been evicted");
     }
 
     #[tokio::test]

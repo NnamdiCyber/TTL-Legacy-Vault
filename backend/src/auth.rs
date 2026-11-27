@@ -153,7 +153,7 @@ pub async fn login(
 pub async fn refresh(
     State(db): State<Arc<Db>>,
     Json(req): Json<RefreshRequest>,
-) -> Result<Json<TokenPairResponse>, AppError> {
+) -> Result<impl axum::response::IntoResponse, AppError> {
     let secret = jwt_secret();
     let validation = Validation::default();
 
@@ -181,7 +181,13 @@ pub async fn refresh(
             .map_err(|e| AppError::Unauthorized(format!("failed to rotate refresh token: {e}")))?;
 
     if !rotated {
-        let _ = db.revoke_refresh_token_family(&family_id);
+        if let Err(e) = db.revoke_refresh_token_family(&family_id) {
+            tracing::error!(
+                family_id = %family_id,
+                error = %e,
+                "failed to revoke refresh token family after reuse detection"
+            );
+        }
         return Err(AppError::Unauthorized(
             "refresh token reuse detected; all sessions in this family have been revoked".into(),
         ));
@@ -190,16 +196,23 @@ pub async fn refresh(
     let access_token = issue_access_token(&secret, &sub, vec![])?;
     let new_refresh_token = issue_refresh_token(&db, &secret, &sub, &family_id)?;
 
-    // Issue #1497: also rotate the CSRF token on token refresh so the
-    // session-fixation protection extends across token renewals.
+    // Issue #1497: also rotate the CSRF token on token refresh and set the
+    // matching `__Host-csrf` cookie so the double-submit pattern stays in sync.
     let csrf_token = generate_csrf_token();
+    let csrf_cookie = csrf_cookie_header_value(&csrf_token);
 
-    Ok(Json(TokenPairResponse {
+    let body = TokenPairResponse {
         access_token,
         refresh_token: new_refresh_token,
         expires_in: ACCESS_TOKEN_TTL_SECONDS,
         csrf_token,
-    }))
+    };
+
+    Ok((
+        axum::http::StatusCode::OK,
+        [(axum::http::header::SET_COOKIE, csrf_cookie)],
+        axum::Json(body),
+    ))
 }
 
 #[cfg(test)]
@@ -252,6 +265,27 @@ mod tests {
         }
     }
 
+    async fn do_refresh(db: &Arc<Db>, refresh_token: &str) -> Result<TokenPairResponse, AppError> {
+        let result = refresh(
+            State(Arc::clone(db)),
+            ExtractJson(RefreshRequest {
+                refresh_token: refresh_token.to_string(),
+            }),
+        )
+        .await;
+
+        match result {
+            Err(e) => Err(e),
+            Ok(resp) => {
+                use axum::body::to_bytes;
+                let response = resp.into_response();
+                let body_bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+                let pair: TokenPairResponse = serde_json::from_slice(&body_bytes).unwrap();
+                Ok(pair)
+            }
+        }
+    }
+
     #[tokio::test]
     async fn login_then_refresh_rotates_the_refresh_token() {
         let (db, path) = test_db().await;
@@ -260,24 +294,11 @@ mod tests {
         let first_refresh = login_resp.refresh_token.clone();
 
         // First use rotates successfully and yields a different refresh token.
-        let refreshed = refresh(
-            State(Arc::clone(&db)),
-            ExtractJson(RefreshRequest {
-                refresh_token: first_refresh.clone(),
-            }),
-        )
-        .await
-        .unwrap();
-        assert_ne!(refreshed.0.refresh_token, first_refresh);
+        let refreshed = do_refresh(&db, &first_refresh).await.unwrap();
+        assert_ne!(refreshed.refresh_token, first_refresh);
 
         // Reusing the now-rotated-out original token must be rejected.
-        let reuse_result = refresh(
-            State(Arc::clone(&db)),
-            ExtractJson(RefreshRequest {
-                refresh_token: first_refresh,
-            }),
-        )
-        .await;
+        let reuse_result = do_refresh(&db, &first_refresh).await;
         assert!(
             reuse_result.is_err(),
             "reusing a rotated refresh token must fail"
@@ -286,13 +307,7 @@ mod tests {
         // ...and reuse detection must have revoked the whole family: even the
         // *second* (still-fresh) token from the successful rotation above is
         // now unusable.
-        let second_refresh_reuse = refresh(
-            State(Arc::clone(&db)),
-            ExtractJson(RefreshRequest {
-                refresh_token: refreshed.0.refresh_token.clone(),
-            }),
-        )
-        .await;
+        let second_refresh_reuse = do_refresh(&db, &refreshed.refresh_token).await;
         assert!(
             second_refresh_reuse.is_err(),
             "reuse detection must revoke the entire token family, not just the reused token"
@@ -324,13 +339,7 @@ mod tests {
         .claims;
         db.revoke_refresh_token(&claims.jti).unwrap();
 
-        let result = refresh(
-            State(db),
-            ExtractJson(RefreshRequest {
-                refresh_token: bogus,
-            }),
-        )
-        .await;
+        let result = do_refresh(&db, &bogus).await;
         assert!(result.is_err());
         let _ = std::fs::remove_file(path);
     }
@@ -416,6 +425,46 @@ mod tests {
             set_cookie.contains("SameSite=Strict"),
             "cookie must be SameSite=Strict"
         );
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[tokio::test]
+    async fn refresh_sets_csrf_cookie_matching_body_token() {
+        let (db, path) = test_db().await;
+
+        use axum::body::to_bytes;
+        use axum::response::IntoResponse as _;
+
+        let login_resp = do_login(&db, "GCOOKIE...REFRESH").await.unwrap();
+
+        let resp = refresh(
+            State(Arc::clone(&db)),
+            ExtractJson(RefreshRequest {
+                refresh_token: login_resp.refresh_token,
+            }),
+        )
+        .await
+        .expect("refresh must succeed");
+
+        let http_response = resp.into_response();
+        let set_cookie = http_response
+            .headers()
+            .get(axum::http::header::SET_COOKIE)
+            .expect("refresh must set the __Host-csrf cookie")
+            .to_str()
+            .unwrap()
+            .to_owned();
+
+        let body_bytes = to_bytes(http_response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let pair: TokenPairResponse = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert!(set_cookie.contains(&pair.csrf_token));
+        assert!(set_cookie.contains("__Host-csrf="));
+        assert!(set_cookie.contains("HttpOnly"));
+        assert!(set_cookie.contains("SameSite=Strict"));
 
         let _ = std::fs::remove_file(path);
     }

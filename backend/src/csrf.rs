@@ -119,13 +119,28 @@ pub async fn csrf_middleware(req: Request<Body>, next: Next) -> Response {
         .map(str::to_owned);
 
     match (cookie_token, header_token) {
-        (Some(cookie), Some(header)) if !cookie.is_empty() && cookie == header => {
+        (Some(cookie), Some(header))
+            if !cookie.is_empty() && constant_time_eq(cookie.as_bytes(), header.as_bytes()) =>
+        {
             let mut response = next.run(req).await;
             rotate_token(&mut response);
             response
         }
         _ => csrf_forbidden(),
     }
+}
+
+/// Constant-time byte slice comparison to prevent timing side-channels when
+/// comparing CSRF tokens.
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut diff = 0u8;
+    for (x, y) in a.iter().zip(b.iter()) {
+        diff |= x ^ y;
+    }
+    diff == 0
 }
 
 /// Replace the CSRF token after a validated state-mutating request.
@@ -142,14 +157,19 @@ fn rotate_token(response: &mut Response) {
     }
 }
 
-/// Parse the `Cookie` header and return the value of `__Host-csrf` if present.
+/// Parse all `Cookie` headers (supporting HTTP/2 multi-header cookies) and
+/// return the value of `__Host-csrf` if present.
 fn extract_cookie_token(headers: &axum::http::HeaderMap) -> Option<String> {
-    let cookie_header = headers.get("cookie")?.to_str().ok()?;
-    for pair in cookie_header.split(';') {
-        let pair = pair.trim();
-        if let Some(value) = pair.strip_prefix(CSRF_COOKIE_NAME) {
-            if let Some(value) = value.strip_prefix('=') {
-                return Some(value.to_owned());
+    for header_val in headers.get_all("cookie") {
+        let Ok(cookie_header) = header_val.to_str() else {
+            continue;
+        };
+        for pair in cookie_header.split(';') {
+            let pair = pair.trim();
+            if let Some(value) = pair.strip_prefix(CSRF_COOKIE_NAME) {
+                if let Some(value) = value.strip_prefix('=') {
+                    return Some(value.to_owned());
+                }
             }
         }
     }
@@ -232,6 +252,21 @@ mod unit_tests {
     fn extract_cookie_returns_none_with_no_cookie_header() {
         let headers = HeaderMap::new();
         assert!(extract_cookie_token(&headers).is_none());
+    }
+
+    #[test]
+    fn extract_cookie_from_multiple_cookie_headers() {
+        let mut headers = HeaderMap::new();
+        headers.append("cookie", "other=value".parse().unwrap());
+        headers.append("cookie", "__Host-csrf=h2-token".parse().unwrap());
+        assert_eq!(extract_cookie_token(&headers), Some("h2-token".to_owned()));
+    }
+
+    #[test]
+    fn constant_time_eq_compares_bytes_accurately() {
+        assert!(constant_time_eq(b"abc-123", b"abc-123"));
+        assert!(!constant_time_eq(b"abc-123", b"abc-124"));
+        assert!(!constant_time_eq(b"abc", b"abcd"));
     }
 }
 
