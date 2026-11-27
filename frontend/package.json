@@ -42,6 +42,7 @@
     "testEnvironment": "jsdom",
     "preset": "ts-jest",
     "testMatch": [
+      "<rootDir>/src/__tests__/ApiClient.test.ts",
       "<rootDir>/src/__tests__/ErrorBoundary.test.tsx",
       "<rootDir>/src/__tests__/TtlCountdown.test.tsx",
       "<rootDir>/src/__tests__/VaultHealthStatus.test.tsx",

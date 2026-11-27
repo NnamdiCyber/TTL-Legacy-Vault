@@ -52,14 +52,19 @@ function readCookie(name: string): string | null {
   }
 
   const match = document.cookie
-    .split("; ")
+    .split(/;\s*/)
     .find((entry) => entry.startsWith(`${name}=`));
 
   if (!match) {
     return null;
   }
 
-  return decodeURIComponent(match.slice(name.length + 1));
+  const rawValue = match.slice(name.length + 1);
+  try {
+    return decodeURIComponent(rawValue);
+  } catch {
+    return rawValue;
+  }
 }
 
 async function parseApiResponse<T>(response: Response): Promise<T> {
@@ -81,6 +86,7 @@ export class ApiClient {
   private readonly credentials: RequestCredentials;
   private readonly csrfCookieName: string;
   private readonly csrfHeaderName: string;
+  private csrfToken: string | null = null;
 
   constructor(options: ApiClientOptions = {}) {
     this.baseUrl = resolveBaseUrl(options.baseUrl);
@@ -98,11 +104,17 @@ export class ApiClient {
   }
 
   public async getCsrfToken(): Promise<CsrfTokenResponse> {
-    return this.request<CsrfTokenResponse>("/api/csrf-token");
+    const response = await this.request<CsrfTokenResponse>("/api/csrf-token");
+    if (response.csrf_token) {
+      this.csrfToken = response.csrf_token;
+    }
+    return response;
   }
 
   public async getReminderPreferences(vaultId: string): Promise<ReminderPreferences> {
-    return this.request<ReminderPreferences>(`/api/vaults/${vaultId}/reminder-preferences`);
+    return this.request<ReminderPreferences>(
+      `/api/vaults/${encodeURIComponent(vaultId)}/reminder-preferences`,
+    );
   }
 
   public async setReminderPreferences(
@@ -110,11 +122,14 @@ export class ApiClient {
     payload: SetPreferencesRequest,
     headers?: Record<string, string>,
   ): Promise<ReminderPreferences> {
-    return this.request<ReminderPreferences>(`/api/vaults/${vaultId}/reminder-preferences`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-      headers,
-    });
+    return this.request<ReminderPreferences>(
+      `/api/vaults/${encodeURIComponent(vaultId)}/reminder-preferences`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers,
+      },
+    );
   }
 
   public async registerDeviceToken(payload: RegisterTokenRequest): Promise<DeviceToken> {
@@ -157,7 +172,10 @@ export class ApiClient {
     }
 
     if (isMutatingMethod && !headers.has(this.csrfHeaderName)) {
-      const csrfToken = readCookie(this.csrfCookieName) ?? (await this.getCsrfToken()).csrf_token;
+      const csrfToken =
+        readCookie(this.csrfCookieName) ??
+        this.csrfToken ??
+        (await this.getCsrfToken()).csrf_token;
       if (csrfToken) {
         headers.set(this.csrfHeaderName, csrfToken);
       }
@@ -174,12 +192,19 @@ export class ApiClient {
       credentials: this.credentials,
     });
 
+    const rotatedCsrf = response.headers.get(this.csrfHeaderName);
+    if (rotatedCsrf) {
+      this.csrfToken = rotatedCsrf;
+    }
+
     if (!response.ok) {
       const errorBody = await parseApiResponse<ErrorResponse | unknown>(response);
       const message =
-        typeof errorBody === "object" && errorBody && "error" in errorBody
-          ? String(errorBody.error)
-          : `Request failed with status ${response.status}`;
+        typeof errorBody === "object" && errorBody !== null && "error" in errorBody
+          ? String((errorBody as { error: unknown }).error)
+          : typeof errorBody === "object" && errorBody !== null && "message" in errorBody
+            ? String((errorBody as { message: unknown }).message)
+            : `Request failed with status ${response.status}`;
 
       throw new ApiError(message, response.status, errorBody);
     }
